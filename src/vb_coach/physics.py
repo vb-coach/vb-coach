@@ -14,7 +14,7 @@ from __future__ import annotations
 import numpy as np
 
 from vb_coach.aerodynamics import (
-    cd_subcritical,
+    cd_full_regime,
     cl_magnus,
     reynolds,
     spin_parameter,
@@ -66,7 +66,7 @@ def total_acceleration(
     speed = float(np.linalg.norm(velocity))
     d = diameter if diameter is not None else 2 * radius
     re = reynolds(speed, d, NU_AIR)
-    cd = cd_subcritical(re)
+    cd = cd_full_regime(re)
     f = (
         gravity_force(mass)
         + drag_force(velocity, rho, area, cd)
