@@ -8,6 +8,12 @@ Submodules:
 
 from vb_coach.aerodynamics.drag import reynolds, cd_subcritical, cd_full_regime
 from vb_coach.aerodynamics.magnus import spin_parameter, cl_magnus
+from vb_coach.aerodynamics.knuckle import (
+    TAU_KNUCKLE,
+    OUState,
+    cl_lat_rms,
+    step_ou,
+)
 
 __all__ = [
     "reynolds",
@@ -15,4 +21,8 @@ __all__ = [
     "cd_full_regime",
     "spin_parameter",
     "cl_magnus",
+    "TAU_KNUCKLE",
+    "OUState",
+    "cl_lat_rms",
+    "step_ou",
 ]
