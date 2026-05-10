@@ -33,6 +33,7 @@ from vb_coach.trajectory import ReleaseState, simulate_stochastic
 
 
 def _release(v0_mag: float, z0: float = 2.4, vz: float = 0.5) -> ReleaseState:
+    """Standard server position: at the end-line center, contact height z0, speed v0_mag downcourt."""
     return ReleaseState(
         position=np.array([0.0, -9.0, z0]),
         velocity=np.array([0.0, v0_mag, vz]),
@@ -94,21 +95,15 @@ def plot_canonical() -> plt.Figure:
     return fig
 
 
-def plot_montecarlo(n_trials: int = 50, v0_mag: float = 16.0):
-    rs_template = _release(v0_mag)
+def plot_montecarlo(n_trials: int = 50, v0_mag: float = 16.0) -> tuple[plt.Figure, dict[str, float]]:
     landings = []
     for seed in range(n_trials):
-        rs = ReleaseState(
-            position=rs_template.position.copy(),
-            velocity=rs_template.velocity.copy(),
-            spin=rs_template.spin.copy(),
-        )
         rng = np.random.default_rng(seed)
-        traj = simulate_stochastic(rs, rng=rng, t_max=1.5, dt=0.005)
+        traj = simulate_stochastic(_release(v0_mag), rng=rng, t_max=1.5, dt=0.005)
         landings.append(traj.position[-1])
     landings = np.array(landings)
 
-    traj_det = simulate_stochastic(rs_template, rng=None, t_max=1.5, dt=0.005)
+    traj_det = simulate_stochastic(_release(v0_mag), rng=None, t_max=1.5, dt=0.005)
     landing_det = traj_det.position[-1]
 
     fig, (ax_xy, ax_yz) = plt.subplots(1, 2, figsize=(12, 5))
