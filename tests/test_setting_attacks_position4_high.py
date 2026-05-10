@@ -26,21 +26,17 @@ def test_score_returns_zero_when_trajectory_misses_window():
 
 
 def test_score_returns_zero_when_only_ascent_intersects():
-    # Engineering a release where the ball enters the window only on ascent.
-    # Set straight at the attacker contact point at fast horizontal speed,
-    # passes through window while still climbing because release starts low.
+    # Set passing through the window on its ascent (high horizontal speed
+    # toward the attacker contact point, released near floor). The implementation
+    # returns score=0 because high-ball scoring only considers post-apex dwell.
     rs = _set_release(
         position=np.array([0.5, 0.0, 1.5]),
-        velocity=np.array([-4.5, 0.4, 6.0]),  # toward window, mostly up
+        velocity=np.array([-4.5, 0.4, 6.0]),
     )
     traj = simulate(rs, t_max=3.0)
     window = position4_high_window(DEFAULT_AMATEUR_MALE)
     result = score_high_ball(traj, window)
-    # If only ascent intersection, score is zero (high ball means descent hit)
-    # Acceptable: result.score could legitimately be 0 here.
-    # The actionable assertion is: if the dwell is on ascent only, score is 0.
-    if result.dwell_seconds > 0 and result.contact_index < traj.apex_index():
-        assert result.score == 0.0
+    assert result.score == 0.0
 
 
 def test_score_good_high_ball_above_threshold():
@@ -54,17 +50,16 @@ def test_score_good_high_ball_above_threshold():
     assert result.dwell_seconds > 0.05
 
 
-def test_score_too_fast_descent_velocity_kills_score():
-    # Lower apex (faster descent at the window crossing) - flat low set
-    rs = _set_release(velocity=np.array([-5.0, -0.5, 4.5]))
+def test_score_low_apex_set_scores_low():
+    # Low-apex set (lower z velocity → faster descent through the window).
+    # Tune to ensure the trajectory does enter the window during descent.
+    rs = _set_release(velocity=np.array([-4.5, -0.5, 4.0]))
     traj = simulate(rs, t_max=3.0)
     window = position4_high_window(DEFAULT_AMATEUR_MALE)
     result = score_high_ball(traj, window)
-    # Either the ball misses the window or v_z at contact is too fast — either
-    # way the score should be low. If it does enter the window, v_z should be
-    # outside the comfortable [-6, -2] m/s band.
-    if result.score > 0:
-        assert result.velocity_at_contact_z < -5.0 or result.velocity_at_contact_z > -2.0
+    # The score should be substantially lower than a textbook high ball.
+    # If the ball misses the window entirely, score=0 (still low).
+    assert result.score < 0.5
 
 
 def test_score_is_in_unit_interval():

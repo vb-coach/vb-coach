@@ -38,7 +38,9 @@ class HighBallScore:
     velocity_at_contact_z
         Vertical velocity at the midpoint of the in-window descent segment.
     lateral_drift_m
-        |x| displacement of the ball during the in-window descent segment.
+        y-axis displacement of the ball during the in-window descent segment.
+        y is perpendicular to the net; it is the lateral axis for a ball
+        travelling primarily in the -x direction toward the left antenna.
     contact_index
         Trajectory index used as the "contact" reference point (midpoint of
         in-window descent segment). -1 if the ball never entered the window
@@ -73,9 +75,14 @@ def score_high_ball(trajectory: Trajectory, window: HitWindow) -> HighBallScore:
 
     The trajectory must enter the hit window during its descent (post-apex)
     for a non-zero score. The score combines:
-      - dwell_score: linear 0..1 as in-window dwell goes 0..0.30 s
+      - dwell_score: linear 0..1 as in-window dwell goes 0..0.08 s
+        (matches physical max crossing time of a 0.40 m tall window at the
+         ideal descent speed of -4 m/s)
       - velocity_score: triangular peak at v_z = -4 m/s, zero at +/- 2 m/s away
       - lateral_score: linear 1..0 as in-window lateral drift goes 0..0.30 m
+
+    The score is the product of all three sub-scores; any sub-score of
+    zero produces score = 0.0.
 
     Returns a HighBallScore with the combined score (product of sub-scores)
     and diagnostic fields.
@@ -93,6 +100,8 @@ def score_high_ball(trajectory: Trajectory, window: HitWindow) -> HighBallScore:
 
     dwell_seconds = float(trajectory.time[last] - trajectory.time[first])
     velocity_z = float(trajectory.velocity[contact, 2])
+    # y is perpendicular to the net and is the true lateral axis for a
+    # ball travelling in the -x direction toward the 4号位 antenna.
     drift = float(
         np.max(trajectory.position[descent_inside, 1])
         - np.min(trajectory.position[descent_inside, 1])
