@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from vb_coach.trajectory import ReleaseState, Trajectory, simulate
+from vb_coach.trajectory import ReleaseState, Trajectory, simulate, simulate_stochastic
 from vb_coach.constants import RHO_AIR
 
 
@@ -113,3 +113,58 @@ def test_simulate_back_spin_lifts_ball():
     traj_base = simulate(base, t_max=3.0)
     traj_spun = simulate(spun, t_max=3.0)
     assert traj_spun.position[-1, 1] > traj_base.position[-1, 1]
+
+
+def test_simulate_stochastic_returns_trajectory():
+    rs = ReleaseState(
+        position=np.array([0.0, -9.0, 2.4]),
+        velocity=np.array([0.0, 15.0, 0.5]),
+        spin=np.array([0.0, 0.0, 0.0]),
+    )
+    rng = np.random.default_rng(0)
+    traj = simulate_stochastic(rs, rng=rng, t_max=1.5, dt=0.005)
+    assert isinstance(traj, Trajectory)
+    assert len(traj) > 10
+
+
+def test_simulate_stochastic_terminates_on_floor():
+    rs = ReleaseState(
+        position=np.array([0.0, -9.0, 2.4]),
+        velocity=np.array([0.0, 15.0, 0.5]),
+        spin=np.array([0.0, 0.0, 0.0]),
+    )
+    rng = np.random.default_rng(0)
+    traj = simulate_stochastic(rs, rng=rng, t_max=3.0, dt=0.005)
+    assert traj.position[-1, 2] <= 0.01
+
+
+def test_simulate_stochastic_deterministic_without_rng():
+    # Without RNG, no lateral knuckle force. Two runs must match exactly.
+    rs = ReleaseState(
+        position=np.array([0.0, -9.0, 2.4]),
+        velocity=np.array([0.0, 15.0, 0.5]),
+        spin=np.array([0.0, 0.0, 0.0]),
+    )
+    traj_a = simulate_stochastic(rs, rng=None, t_max=1.5, dt=0.005)
+    traj_b = simulate_stochastic(rs, rng=None, t_max=1.5, dt=0.005)
+    np.testing.assert_array_equal(traj_a.position, traj_b.position)
+
+
+def test_simulate_stochastic_monte_carlo_landing_scatter():
+    # Regression: 50 seeds at v=16 m/s should produce sideline sigma ~30 cm
+    # to match the float-serve research doc and the original demo's output.
+    p0 = np.array([0.0, -9.0, 2.4])
+    v0 = np.array([0.0, 16.0, 0.5])
+    landings_x = []
+    for seed in range(50):
+        rs = ReleaseState(
+            position=p0.copy(),
+            velocity=v0.copy(),
+            spin=np.array([0.0, 0.0, 0.0]),
+        )
+        rng = np.random.default_rng(seed)
+        traj = simulate_stochastic(rs, rng=rng, t_max=1.5, dt=0.005)
+        landings_x.append(float(traj.position[-1, 0]))
+    sigma_x_cm = float(np.std(landings_x)) * 100
+    # Tolerate +/- 8 cm of the 30 cm value reported in the research doc
+    assert 22 < sigma_x_cm < 38

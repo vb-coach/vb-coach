@@ -56,6 +56,7 @@ class Trajectory:
 from scipy.integrate import solve_ivp
 
 from vb_coach.aerodynamics import cd_full_regime, cl_magnus, reynolds, spin_parameter
+from vb_coach.aerodynamics.knuckle import OUState, step_ou
 from vb_coach.constants import (
     BALL_CROSS_SECTION,
     BALL_DIAMETER,
@@ -65,6 +66,7 @@ from vb_coach.constants import (
     NU_AIR,
     RHO_AIR,
 )
+from vb_coach.physics import drag_force, gravity_force, magnus_force, knuckle_force
 
 
 def _rhs(
@@ -133,3 +135,64 @@ def simulate(
     vel = sol.y[3:6, :].T
     spins = np.broadcast_to(release.spin, (n, 3)).copy()
     return Trajectory(time=sol.t, position=pos, velocity=vel, spin=spins)
+
+
+def simulate_stochastic(
+    release: ReleaseState,
+    rng: np.random.Generator | None,
+    t_max: float = 1.5,
+    dt: float = 0.005,
+    mass: float = BALL_MASS,
+    rho: float = RHO_AIR,
+    area: float = BALL_CROSS_SECTION,
+    radius: float = BALL_RADIUS,
+    diameter: float = BALL_DIAMETER,
+    y_bound: float = 20.0,
+) -> Trajectory:
+    """Symplectic Euler integration with optional OU lateral force.
+
+    Used for float-serve regime where the panel-induced unsteady lateral
+    force must be advanced in lockstep with the position. If rng is None
+    the lateral force is zero and the result is deterministic (gravity +
+    drag + Magnus only).
+
+    Terminates when z < 0 or |y| > y_bound.
+    """
+    n_steps = int(t_max / dt)
+    t = np.zeros(n_steps + 1)
+    pos = np.zeros((n_steps + 1, 3))
+    vel = np.zeros((n_steps + 1, 3))
+    pos[0] = release.position.astype(float)
+    vel[0] = release.velocity.astype(float)
+    ou = OUState()
+
+    for i in range(n_steps):
+        v = vel[i]
+        speed = float(np.linalg.norm(v))
+        f_grav = gravity_force(mass)
+        if speed > 0.0:
+            re = reynolds(speed, diameter, NU_AIR)
+            cd = cd_full_regime(re)
+            f_drag = drag_force(v, rho, area, cd)
+            f_mag = magnus_force(v, release.spin, rho, area, radius)
+        else:
+            re = 0.0
+            f_drag = np.zeros(3)
+            f_mag = np.zeros(3)
+        if rng is not None and speed > 0.1:
+            step_ou(ou, dt, rng)
+            f_lat = knuckle_force(v, ou, rho, area, re)
+        else:
+            f_lat = np.zeros(3)
+        a = (f_grav + f_drag + f_mag + f_lat) / mass
+        vel[i + 1] = v + a * dt
+        pos[i + 1] = pos[i] + vel[i + 1] * dt
+        t[i + 1] = t[i] + dt
+        if pos[i + 1, 2] < 0.0 or abs(pos[i + 1, 1]) > y_bound:
+            stop = i + 2
+            spins = np.broadcast_to(release.spin, (stop, 3)).copy()
+            return Trajectory(
+                time=t[:stop], position=pos[:stop], velocity=vel[:stop], spin=spins
+            )
+    spins = np.broadcast_to(release.spin, (n_steps + 1, 3)).copy()
+    return Trajectory(time=t, position=pos, velocity=vel, spin=spins)
