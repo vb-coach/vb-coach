@@ -7,7 +7,7 @@ timing) is deferred to Phase B; this module is purely geometric.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 DEFAULT_CONTACT_LOSS: float = 0.15
