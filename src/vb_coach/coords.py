@@ -6,8 +6,13 @@ Right-handed frame:
   y-axis: perpendicular to the net, positive into team A's court
   z-axis: vertical, positive up
 
-Spin vector omega uses the right-hand rule: pure back-spin on a ball
-traveling in +x has omega in +y, so omega x v_hat points in +z (lift).
+Spin vector omega uses the right-hand rule. The sign of omega for a given
+"spin name" depends on the direction of travel. Examples:
+  ball travels +x with back-spin  -> omega in -y (top of ball moves in -x)
+  ball travels +x with top-spin   -> omega in +y
+  ball travels +y with back-spin  -> omega in +x
+  ball travels +y with top-spin   -> omega in -x
+The Magnus force is F_m = 0.5 * rho * |v|^2 * A * Cl(S) * (omega_hat x v_hat).
 """
 
 import numpy as np
