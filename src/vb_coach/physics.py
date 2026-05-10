@@ -75,7 +75,7 @@ def total_acceleration(
     return f / mass
 
 
-_KNUCKLE_SPEED_CUTOFF: float = 0.1
+KNUCKLE_SPEED_CUTOFF: float = 0.1
 _KNUCKLE_VERTICAL_FRACTION: float = 0.5
 
 
@@ -97,7 +97,7 @@ def knuckle_force(
     step_ou separately so dt is owned at the simulator level.
     """
     speed = float(np.linalg.norm(velocity))
-    if speed < _KNUCKLE_SPEED_CUTOFF:
+    if speed < KNUCKLE_SPEED_CUTOFF:
         return np.zeros(3)
     v_hat = velocity / speed
     cl = cl_lat_rms(re)

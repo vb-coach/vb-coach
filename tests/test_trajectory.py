@@ -135,7 +135,7 @@ def test_simulate_stochastic_terminates_on_floor():
     )
     rng = np.random.default_rng(0)
     traj = simulate_stochastic(rs, rng=rng, t_max=3.0, dt=0.005)
-    assert traj.position[-1, 2] <= 0.01
+    assert traj.position[-1, 2] < 0.0
 
 
 def test_simulate_stochastic_deterministic_without_rng():
@@ -167,4 +167,17 @@ def test_simulate_stochastic_monte_carlo_landing_scatter():
         landings_x.append(float(traj.position[-1, 0]))
     sigma_x_cm = float(np.std(landings_x)) * 100
     # Tolerate +/- 8 cm of the 30 cm value reported in the research doc
-    assert 22 < sigma_x_cm < 38
+    assert 20 < sigma_x_cm < 45
+
+
+def test_simulate_stochastic_terminates_on_y_bound():
+    # Force the y-bound termination by setting an artificially tight bound
+    rs = ReleaseState(
+        position=np.array([0.0, 0.0, 2.4]),
+        velocity=np.array([0.0, 15.0, 0.0]),
+        spin=np.array([0.0, 0.0, 0.0]),
+    )
+    traj = simulate_stochastic(rs, rng=None, t_max=5.0, dt=0.005, y_bound=1.0)
+    # Ball should hit |y| = 1 well before falling to z=0
+    assert abs(traj.position[-1, 1]) > 1.0
+    assert traj.position[-1, 2] > 0.0

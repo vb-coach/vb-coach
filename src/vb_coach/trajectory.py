@@ -4,7 +4,7 @@ ReleaseState captures the moment the ball leaves the setter's hands.
 Trajectory captures the integrated path: arrays for time, position,
 velocity, and spin sampled at the integrator's output times.
 
-simulate() is implemented further down.
+simulate() and simulate_stochastic() are implemented further down.
 """
 
 from __future__ import annotations
@@ -55,8 +55,7 @@ class Trajectory:
 
 from scipy.integrate import solve_ivp
 
-from vb_coach.aerodynamics import cd_full_regime, cl_magnus, reynolds, spin_parameter
-from vb_coach.aerodynamics.knuckle import OUState, step_ou
+from vb_coach.aerodynamics import cd_full_regime, cl_magnus, reynolds, spin_parameter, OUState, step_ou
 from vb_coach.constants import (
     BALL_CROSS_SECTION,
     BALL_DIAMETER,
@@ -66,7 +65,7 @@ from vb_coach.constants import (
     NU_AIR,
     RHO_AIR,
 )
-from vb_coach.physics import drag_force, gravity_force, magnus_force, knuckle_force
+from vb_coach.physics import drag_force, gravity_force, magnus_force, knuckle_force, KNUCKLE_SPEED_CUTOFF
 
 
 def _rhs(
@@ -179,7 +178,7 @@ def simulate_stochastic(
             re = 0.0
             f_drag = np.zeros(3)
             f_mag = np.zeros(3)
-        if rng is not None and speed > 0.1:
+        if rng is not None and speed > KNUCKLE_SPEED_CUTOFF:
             step_ou(ou, dt, rng)
             f_lat = knuckle_force(v, ou, rho, area, re)
         else:
