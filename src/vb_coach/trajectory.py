@@ -55,7 +55,7 @@ class Trajectory:
 
 from scipy.integrate import solve_ivp
 
-from vb_coach.aerodynamics import cd_subcritical, cl_magnus, reynolds, spin_parameter
+from vb_coach.aerodynamics import cd_full_regime, cl_magnus, reynolds, spin_parameter
 from vb_coach.constants import (
     BALL_CROSS_SECTION,
     BALL_DIAMETER,
@@ -85,7 +85,7 @@ def _rhs(
     if speed > 0.0:
         v_hat = v / speed
         re = reynolds(speed, diameter, NU_AIR)
-        cd = cd_subcritical(re)
+        cd = cd_full_regime(re)
         a = a - (0.5 * rho * speed * speed * area * cd / mass) * v_hat
         spin_mag = float(np.linalg.norm(spin))
         if spin_mag > 0.0:
