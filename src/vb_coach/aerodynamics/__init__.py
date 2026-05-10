@@ -1,7 +1,7 @@
 """Aerodynamic coefficients for a volleyball.
 
 Submodules:
-    drag    - Re-dependent drag and (eventually) full-regime Cd(Re)
+    drag    - Reynolds number, subcritical Cd, and full-regime Cd(Re) across the drag crisis
     magnus  - spin-induced lift (Cl(S))
     knuckle - panel-induced unsteady lateral force (added in this refactor)
 """

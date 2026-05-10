@@ -5,6 +5,12 @@ from __future__ import annotations
 import math
 
 
+_RE_CRIT_LOW = 1.5e5
+_RE_CRIT_HIGH = 2.5e5
+_CD_SUBCRITICAL = 0.45
+_CD_SUPERCRITICAL = 0.18
+
+
 def reynolds(velocity_magnitude: float, diameter: float, kinematic_viscosity: float) -> float:
     return velocity_magnitude * diameter / kinematic_viscosity
 
@@ -16,13 +22,7 @@ def cd_subcritical(reynolds_number: float) -> float:
     new code should call cd_full_regime, which agrees with this in the
     subcritical band and additionally covers the drag crisis.
     """
-    return 0.45
-
-
-_RE_CRIT_LOW = 1.5e5
-_RE_CRIT_HIGH = 2.5e5
-_CD_SUBCRITICAL = 0.45
-_CD_SUPERCRITICAL = 0.18
+    return _CD_SUBCRITICAL
 
 
 def cd_full_regime(reynolds_number: float) -> float:

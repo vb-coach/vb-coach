@@ -1,6 +1,6 @@
 import math
 
-from vb_coach.aerodynamics import reynolds, spin_parameter, cd_subcritical, cl_magnus
+from vb_coach.aerodynamics import reynolds, spin_parameter, cd_subcritical, cl_magnus, cd_full_regime
 from vb_coach.constants import BALL_DIAMETER, BALL_RADIUS, NU_AIR
 
 
@@ -44,9 +44,6 @@ def test_cl_magnus_linear_below_saturation():
     assert math.isclose(cl_magnus(0.25), 0.1, abs_tol=0.01)
 
 
-from vb_coach.aerodynamics import cd_full_regime
-
-
 def test_cd_full_regime_subcritical_band():
     # Re below the drag crisis: Cd plateau at 0.45
     assert cd_full_regime(50_000) == 0.45
@@ -68,3 +65,11 @@ def test_cd_full_regime_critical_band_monotonic():
     assert cd_low > cd_mid > cd_high
     # Midpoint should be the average of the two plateaus
     assert math.isclose(cd_mid, 0.5 * (0.45 + 0.18), abs_tol=0.005)
+
+
+def test_cd_full_regime_continuous_at_band_edges():
+    # Just inside the critical band should match the plateau value
+    # (continuity check on the cosine taper)
+    eps = 1.0
+    assert math.isclose(cd_full_regime(1.5e5 + eps), 0.45, abs_tol=1e-5)
+    assert math.isclose(cd_full_regime(2.5e5 - eps), 0.18, abs_tol=1e-5)
