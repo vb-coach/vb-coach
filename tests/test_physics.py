@@ -2,8 +2,9 @@ import math
 
 import numpy as np
 
-from vb_coach.physics import gravity_force, drag_force, magnus_force, total_acceleration
+from vb_coach.physics import gravity_force, drag_force, magnus_force, total_acceleration, knuckle_force
 from vb_coach.constants import BALL_MASS, G, RHO_AIR, BALL_CROSS_SECTION
+from vb_coach.aerodynamics.knuckle import OUState
 
 
 def test_gravity_points_down_with_magnitude_mg():
@@ -72,3 +73,35 @@ def test_total_acceleration_includes_gravity():
     a = total_acceleration(v, omega, mass=BALL_MASS, rho=RHO_AIR,
                            area=BALL_CROSS_SECTION, radius=0.105)
     np.testing.assert_array_almost_equal(a, np.array([0.0, 0.0, -G]))
+
+
+def test_knuckle_force_zero_at_low_speed():
+    # Below the cutoff (0.1 m/s) the force is suppressed
+    v = np.array([0.05, 0.0, 0.0])
+    ou = OUState(chan_h=1.0, chan_v=1.0)
+    f = knuckle_force(v, ou, rho=1.2, area=0.0346, re=2.0e5)
+    np.testing.assert_array_almost_equal(f, np.zeros(3))
+
+
+def test_knuckle_force_perpendicular_to_velocity():
+    # h_hat and vert_hat are both perpendicular to v_hat by construction
+    v = np.array([0.0, 15.0, 0.5])
+    ou = OUState(chan_h=1.0, chan_v=1.0)
+    f = knuckle_force(v, ou, rho=1.2, area=0.0346, re=2.0e5)
+    dot = float(np.dot(f, v / np.linalg.norm(v)))
+    assert abs(dot) < 1e-9
+
+
+def test_knuckle_force_zero_when_ou_zero():
+    v = np.array([0.0, 15.0, 0.5])
+    ou = OUState(chan_h=0.0, chan_v=0.0)
+    f = knuckle_force(v, ou, rho=1.2, area=0.0346, re=2.0e5)
+    np.testing.assert_array_almost_equal(f, np.zeros(3))
+
+
+def test_knuckle_force_zero_when_cl_lat_zero():
+    # At Re far from the peak, cl_lat_rms ~ 0 -> force ~ 0
+    v = np.array([0.0, 15.0, 0.5])
+    ou = OUState(chan_h=1.0, chan_v=1.0)
+    f = knuckle_force(v, ou, rho=1.2, area=0.0346, re=50_000)
+    assert float(np.linalg.norm(f)) < 0.01
