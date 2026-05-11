@@ -22,6 +22,7 @@ _POSITION4_CONTACT_Y: float = 0.2    # just on team A's side of net
 _POSITION4_HIGH_DX: float = 0.5      # lateral tolerance along net (m)
 _POSITION4_HIGH_DY: float = 0.3      # depth tolerance across net (m)
 _POSITION4_HIGH_DZ: float = 0.20     # vertical tolerance around contact height (m)
+_POSITION4_HALF_DZ: float = 0.18     # tighter vertical tolerance for 半高
 
 
 @dataclass
@@ -79,4 +80,19 @@ def position4_high_window(attacker: Attacker) -> HitWindow:
         dx=_POSITION4_HIGH_DX,
         dy=_POSITION4_HIGH_DY,
         dz=_POSITION4_HIGH_DZ,
+    )
+
+
+def position4_half_window(attacker: Attacker) -> HitWindow:
+    """Hit-window for a 4号位 半高 (semi-high) ball attack."""
+    center = np.array([
+        _POSITION4_CONTACT_X,
+        _POSITION4_CONTACT_Y,
+        attacker.contact_height,
+    ])
+    return HitWindow(
+        center=center,
+        dx=_POSITION4_HIGH_DX,
+        dy=_POSITION4_HIGH_DY,
+        dz=_POSITION4_HALF_DZ,
     )
