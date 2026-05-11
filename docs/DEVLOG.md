@@ -5,7 +5,7 @@
 
 ---
 
-## 2026-05-10 — HitWindow 重构启动
+## 2026-05-10 — HitWindow 重构启动 + 文献调研结果
 
 **触发**：用户问"为什么三种球种的击球窗口不一样"。承认现有设计是 over-parameterized：窗口尺寸的差异（如 dx 0.5 vs 0.6，dz 0.18 vs 0.20）和评分函数的差异（dwell target、velocity band、lateral max）在惩罚同一件事。
 
@@ -14,16 +14,25 @@
 - Score function = **战术品质**（球种相关）
 - 三种球种共享同一个 window
 
-**正在做**：
-- 派研究 agent 找文献依据（reach envelope / swing arc / contact volume tolerance）
-- 大概率不是矩形 —— ellipsoid 或 swing-arc segment 更接近真实
+**研究 agent 回来了**：[reference_hit_window_biomechanics.md](.claude memory)。关键发现：
+- **Wagner et al. 2020** 是唯一变化球位置测肌肉激活的论文。±20 cm 偏移 → 三角肌负荷涨 70%。这是 envelope 的尺度基准。
+- **没有任何论文**测过 spike velocity / success rate vs contact position deviation —— 数据缺口。
+- 教练学一致认同：接触在**肩前 30–46 cm**、**摸高峰值**处；前向比后向容差大；摸高是硬上限（无 "above max reach"）
+- 跨项目参考：tennis ~80mm、baseball ±23cm 横向 —— **量级都是 ~20 cm**
+- 推荐 **Model B：非对称椭球**（前 0.30 / 后 0.15 / 横 0.20 / 上 0.05 / 下 0.30 m，amateur male）
+- Model C/D（球冠 / 非对称球冠）更忠实但需要 swing-plane 朝向，暂不需要
 
-**待研究结果回来后决定**：
-- 几何模型（轴对齐椭球？带朝向的椭球？球冠片段？）
-- 参数化方式（继续用 attacker 参数，还是引入挥臂半径等新参数）
-- 是否在 viz 里渲染 envelope（替换当前的绿色 box）
+**重构决策**：
+- 用 Model B 非对称椭球替换轴对齐盒子
+- 删除三个球种各自的 window factory，改用 `position4_hit_window(attacker)` 单一工厂
+- 当前 lateral 0.5m 是 Wagner 2× 宽 —— 隐含 footwork tolerance。保留较宽的横向（lateral=0.40m）反映业余攻手脚步调整
+- z_up = 0.05 m 修了一个 latent bug：当前对称模型允许 ball 在 contact_height + 0.20 m 也算 in-window，但那高于 max reach，物理不可能
+- 评分函数差异**只剩**：velocity_best、velocity_band、dwell_target、lateral_max_drift；窗口几何统一
 
-**为什么记下来**：这个重构跟之前的 unification refactor 一样，是修一个我自己在 plan 里写错的 over-engineering。下次写计划时要警惕"两层独立惩罚同一件事"。
+**为什么记下来**：
+1. 重构同样的 over-engineering 教训 —— 警惕"两层独立惩罚同一件事"
+2. Wagner 的 ±20 cm 是项目里第一个**真正数据校准**的参数（之前的 dwell target 等都是直觉）
+3. 文献承认缺口 —— 我们的评分仍是 model prior，不是 truth；要真校准需要 spike-success vs deviation 的实验
 
 ---
 
