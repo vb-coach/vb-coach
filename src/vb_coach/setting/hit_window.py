@@ -23,6 +23,9 @@ _POSITION4_HIGH_DX: float = 0.5      # lateral tolerance along net (m)
 _POSITION4_HIGH_DY: float = 0.3      # depth tolerance across net (m)
 _POSITION4_HIGH_DZ: float = 0.20     # vertical tolerance around contact height (m)
 _POSITION4_HALF_DZ: float = 0.18     # tighter vertical tolerance for 半高
+_POSITION4_SHOOT_DX: float = 0.6     # wider along-net because ball moves fast in x
+_POSITION4_SHOOT_DY: float = 0.25    # depth tolerance for 平拉开
+_POSITION4_SHOOT_DZ: float = 0.18    # vertical tolerance for 平拉开 (flat arc)
 
 
 @dataclass
@@ -95,4 +98,19 @@ def position4_half_window(attacker: Attacker) -> HitWindow:
         dx=_POSITION4_HIGH_DX,
         dy=_POSITION4_HIGH_DY,
         dz=_POSITION4_HALF_DZ,
+    )
+
+
+def position4_shoot_window(attacker: Attacker) -> HitWindow:
+    """Hit-window for a 4号位 平拉开 (flat shoot to pin) ball attack."""
+    center = np.array([
+        _POSITION4_CONTACT_X,
+        _POSITION4_CONTACT_Y,
+        attacker.contact_height,
+    ])
+    return HitWindow(
+        center=center,
+        dx=_POSITION4_SHOOT_DX,
+        dy=_POSITION4_SHOOT_DY,
+        dz=_POSITION4_SHOOT_DZ,
     )
