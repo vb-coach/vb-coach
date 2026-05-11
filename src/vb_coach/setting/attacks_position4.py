@@ -1,8 +1,8 @@
 """Quality-scoring functions for 4号位 attacks.
 
-Each scoring function maps a (Trajectory, HitWindow) pair to a HighBallScore
-(or analogous score type) with a scalar `score` in [0, 1] plus diagnostic
-sub-scores. Scores are the product of three orthogonal quality dimensions:
+Each scoring function maps a (Trajectory, HitWindow) pair to an attack-specific
+score dataclass (HighBallScore, HalfBallScore, or ShootBallScore) with a scalar
+`score` in [0, 1] plus diagnostic sub-scores. Scores are the product of three orthogonal quality dimensions:
 dwell time in the hit window, vertical velocity at contact, and lateral
 stability through the dwell.
 """
