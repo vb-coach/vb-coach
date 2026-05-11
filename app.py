@@ -26,11 +26,11 @@ from vb_coach.viz.plotly3d import plot_attack_3d
 
 
 _ATTACK_PRESETS = {
-    "高球 (high)":   {"position": (0.5, 0.8, 2.2),  "velocity": (-4.8, -0.5, 5.5),
+    "高球 (high)":   {"position": (0.5, 0.8, 2.2),  "velocity": (-4.8, -0.6, 5.5),
                       "score_fn": score_high_ball},
-    "半高 (half)":   {"position": (0.5, 0.8, 2.2),  "velocity": (-6.5, -0.5, 4.5),
+    "半高 (half)":   {"position": (0.5, 0.8, 2.2),  "velocity": (-7.0, -0.75, 4.4),
                       "score_fn": score_half_ball},
-    "平拉开 (shoot)": {"position": (-1.5, 0.5, 2.3), "velocity": (-7.5, -0.5, 3.5),
+    "平拉开 (shoot)": {"position": (-1.5, 0.5, 2.3), "velocity": (-8.5, -0.6, 3.0),
                       "score_fn": score_shoot_ball},
 }
 

@@ -34,7 +34,7 @@ def main() -> None:
     window = position4_hit_window(attacker)
 
     scenarios = [
-        ("good high ball (v0=-4.8,-0.5,5.5)", np.array([-4.8, -0.5, 5.5])),
+        ("good high ball (v0=-4.8,-0.6,5.5)", np.array([-4.8, -0.6, 5.5])),
         ("low / flat set (v0=-4.5,-0.5,4.0)", np.array([-4.5, -0.5, 4.0])),
         ("off-line set (v0=-3,-1.5,7.5)",     np.array([-3.0, -1.5, 7.5])),
     ]

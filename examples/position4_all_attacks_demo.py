@@ -37,9 +37,9 @@ def main() -> None:
     window = position4_hit_window(attacker)
 
     scenarios = [
-        ("high",  np.array([0.5, 0.8, 2.2]),  np.array([-4.8, -0.5, 5.5])),
-        ("half",  np.array([0.5, 0.8, 2.2]),  np.array([-6.5, -0.5, 4.5])),
-        ("shoot", np.array([-1.5, 0.5, 2.3]), np.array([-7.5, -0.5, 3.5])),
+        ("high",  np.array([0.5, 0.8, 2.2]),  np.array([-4.8, -0.6, 5.5])),
+        ("half",  np.array([0.5, 0.8, 2.2]),  np.array([-7.0, -0.75, 4.4])),
+        ("shoot", np.array([-1.5, 0.5, 2.3]), np.array([-8.5, -0.6, 3.0])),
     ]
 
     trajectories: list[tuple[str, np.ndarray, np.ndarray, object]] = []
