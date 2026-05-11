@@ -2,7 +2,7 @@ import numpy as np
 
 from vb_coach.setting.attacker import DEFAULT_AMATEUR_MALE
 from vb_coach.setting.attacks_position4 import HalfBallScore, score_half_ball
-from vb_coach.setting.hit_window import position4_half_window
+from vb_coach.setting.hit_window import position4_hit_window
 from vb_coach.trajectory import ReleaseState, simulate
 
 
@@ -15,7 +15,7 @@ def _set_release(velocity: np.ndarray, position: np.ndarray | None = None) -> Re
 def test_score_half_returns_zero_when_trajectory_misses_window():
     rs = _set_release(velocity=np.array([0.0, 0.0, 5.0]))
     traj = simulate(rs, t_max=3.0)
-    window = position4_half_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_half_ball(traj, window)
     assert result.score == 0.0
 
@@ -26,19 +26,17 @@ def test_score_half_returns_zero_when_only_ascent_intersects():
         velocity=np.array([-4.5, 0.4, 6.0]),
     )
     traj = simulate(rs, t_max=3.0)
-    window = position4_half_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_half_ball(traj, window)
     assert result.score == 0.0
 
 
 def test_score_half_good_semi_high_above_threshold():
-    # Tune for 半高: lower apex (~3-4m), hit during descent at v_z ~ -2.5 m/s.
-    # The implementer should retune this velocity if the first guess doesn't
-    # produce a clear-win scenario, just like Task A1.1 retuned the high-ball
-    # velocity. Goal: score > 0.5.
-    rs = _set_release(velocity=np.array([-6.5, -0.5, 4.5]))
+    # Retuned for unified ellipsoid (r_z_up=0.05, r_y_back=0.15): adjusted vx/vy/vz
+    # so the ball crosses x=-4 near y=0.2 at z~2.75 (inside tighter window). Scores ~0.71.
+    rs = _set_release(velocity=np.array([-7.0, -0.75, 4.4]))
     traj = simulate(rs, t_max=3.0)
-    window = position4_half_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_half_ball(traj, window)
     assert result.score > 0.5
 
@@ -49,7 +47,7 @@ def test_score_half_high_ball_velocity_scores_low():
     # criteria (v_z = -4 vs -HALF_VELOCITY_BEST = -2.5, band = 1.5).
     rs = _set_release(velocity=np.array([-4.8, -0.5, 5.5]))
     traj = simulate(rs, t_max=3.0)
-    window = position4_half_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_half_ball(traj, window)
     # Either misses the (smaller) window, or the v_z penalty pulls score low.
     assert result.score < 0.5
@@ -58,7 +56,7 @@ def test_score_half_high_ball_velocity_scores_low():
 def test_score_half_is_in_unit_interval():
     rs = _set_release(velocity=np.array([-6.5, -0.5, 4.5]))
     traj = simulate(rs, t_max=3.0)
-    window = position4_half_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_half_ball(traj, window)
     assert 0.0 <= result.score <= 1.0
     assert 0.0 <= result.dwell_score <= 1.0
@@ -69,7 +67,7 @@ def test_score_half_is_in_unit_interval():
 def test_score_half_returns_diagnostics():
     rs = _set_release(velocity=np.array([-6.5, -0.5, 4.5]))
     traj = simulate(rs, t_max=3.0)
-    window = position4_half_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_half_ball(traj, window)
     assert isinstance(result.score, float)
     assert isinstance(result.dwell_seconds, float)

@@ -6,7 +6,7 @@ from vb_coach.setting.attacks_position4 import (
     HighBallScore,
     score_high_ball,
 )
-from vb_coach.setting.hit_window import position4_high_window
+from vb_coach.setting.hit_window import position4_hit_window
 from vb_coach.trajectory import ReleaseState, simulate
 
 
@@ -20,7 +20,7 @@ def test_score_returns_zero_when_trajectory_misses_window():
     # Set that never reaches the 4号位 antenna area
     rs = _set_release(velocity=np.array([0.0, 0.0, 5.0]))  # straight up + falls back
     traj = simulate(rs, t_max=3.0)
-    window = position4_high_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_high_ball(traj, window)
     assert result.score == 0.0
 
@@ -34,17 +34,18 @@ def test_score_returns_zero_when_only_ascent_intersects():
         velocity=np.array([-4.5, 0.4, 6.0]),
     )
     traj = simulate(rs, t_max=3.0)
-    window = position4_high_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_high_ball(traj, window)
     assert result.score == 0.0
 
 
 def test_score_good_high_ball_above_threshold():
-    # Carefully tuned release that produces a textbook high ball:
-    # apex ~3.6 m, descent into window at v_z ~ -4 m/s, no lateral drift.
-    rs = _set_release(velocity=np.array([-4.8, -0.5, 5.5]))
+    # Retuned for unified ellipsoid (r_z_up=0.05): vy adjusted to -0.6 so the
+    # ball crosses x=-4 closer to y=0.2 (window center), placing it inside the
+    # tighter y-band. Scores ~0.60 vs. old box geometry.
+    rs = _set_release(velocity=np.array([-4.8, -0.6, 5.5]))
     traj = simulate(rs, t_max=3.0)
-    window = position4_high_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_high_ball(traj, window)
     assert result.score > 0.5
     assert result.dwell_seconds > 0.05
@@ -55,7 +56,7 @@ def test_score_low_apex_set_scores_low():
     # Tune to ensure the trajectory does enter the window during descent.
     rs = _set_release(velocity=np.array([-4.5, -0.5, 4.0]))
     traj = simulate(rs, t_max=3.0)
-    window = position4_high_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_high_ball(traj, window)
     # The score should be substantially lower than a textbook high ball.
     # If the ball misses the window entirely, score=0 (still low).
@@ -65,7 +66,7 @@ def test_score_low_apex_set_scores_low():
 def test_score_is_in_unit_interval():
     rs = _set_release(velocity=np.array([-4.8, -0.5, 5.5]))
     traj = simulate(rs, t_max=3.0)
-    window = position4_high_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_high_ball(traj, window)
     assert 0.0 <= result.score <= 1.0
     assert 0.0 <= result.dwell_score <= 1.0
@@ -76,7 +77,7 @@ def test_score_is_in_unit_interval():
 def test_score_returns_diagnostics():
     rs = _set_release(velocity=np.array([-4.8, -0.5, 5.5]))
     traj = simulate(rs, t_max=3.0)
-    window = position4_high_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_high_ball(traj, window)
     # All diagnostic fields are present and have expected types
     assert isinstance(result.score, float)

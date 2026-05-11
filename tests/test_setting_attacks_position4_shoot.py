@@ -2,7 +2,7 @@ import numpy as np
 
 from vb_coach.setting.attacker import DEFAULT_AMATEUR_MALE
 from vb_coach.setting.attacks_position4 import ShootBallScore, score_shoot_ball
-from vb_coach.setting.hit_window import position4_shoot_window
+from vb_coach.setting.hit_window import position4_hit_window
 from vb_coach.trajectory import ReleaseState, simulate
 
 
@@ -15,22 +15,20 @@ def _set_release(velocity: np.ndarray, position: np.ndarray | None = None) -> Re
 def test_score_shoot_returns_zero_when_trajectory_misses_window():
     rs = _set_release(velocity=np.array([0.0, 0.0, 5.0]))
     traj = simulate(rs, t_max=3.0)
-    window = position4_shoot_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_shoot_ball(traj, window)
     assert result.score == 0.0
 
 
 def test_score_shoot_good_flat_set_above_threshold():
-    # Tune for 平拉开: low flat trajectory with apex at attacker contact height,
-    # fast horizontal velocity. Hit at or near apex (v_z ~ 0).
-    # Release from setter position near 3/4 zone (~1.5m from antenna side).
-    # Goal: score > 0.4.
+    # Retuned for unified ellipsoid (r_z_up=0.05): increased |vx| and adjusted vy
+    # so the apex occurs inside the tighter z-band at x=-4 near y=0.2. Scores ~0.79.
     rs = _set_release(
-        velocity=np.array([-7.5, -0.5, 3.5]),
+        velocity=np.array([-8.5, -0.6, 3.0]),
         position=np.array([-1.5, 0.5, 2.3]),
     )
     traj = simulate(rs, t_max=3.0)
-    window = position4_shoot_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_shoot_ball(traj, window)
     assert result.score > 0.4
 
@@ -40,7 +38,7 @@ def test_score_shoot_high_ball_velocity_scores_low():
     # the shoot window because v_z is far from the ideal 0.
     rs = _set_release(velocity=np.array([-4.8, -0.5, 5.5]))
     traj = simulate(rs, t_max=3.0)
-    window = position4_shoot_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_shoot_ball(traj, window)
     assert result.score < 0.4
 
@@ -51,7 +49,7 @@ def test_score_shoot_is_in_unit_interval():
         position=np.array([-1.5, 0.5, 2.3]),
     )
     traj = simulate(rs, t_max=3.0)
-    window = position4_shoot_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_shoot_ball(traj, window)
     assert 0.0 <= result.score <= 1.0
     assert 0.0 <= result.dwell_score <= 1.0
@@ -65,7 +63,7 @@ def test_score_shoot_returns_diagnostics():
         position=np.array([-1.5, 0.5, 2.3]),
     )
     traj = simulate(rs, t_max=3.0)
-    window = position4_shoot_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_shoot_ball(traj, window)
     assert isinstance(result.score, float)
     assert isinstance(result.dwell_seconds, float)
@@ -83,7 +81,7 @@ def test_score_shoot_includes_apex_index():
         position=np.array([-1.5, 0.5, 2.3]),
     )
     traj = simulate(rs, t_max=3.0)
-    window = position4_shoot_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_shoot_ball(traj, window)
     if result.contact_index >= 0:
         apex_idx = traj.apex_index()
