@@ -3,7 +3,7 @@ import plotly.graph_objects as go
 
 from vb_coach.setting.attacker import DEFAULT_AMATEUR_MALE
 from vb_coach.setting.attacks_position4 import score_high_ball
-from vb_coach.setting.hit_window import position4_high_window
+from vb_coach.setting.hit_window import position4_hit_window
 from vb_coach.trajectory import ReleaseState, simulate
 from vb_coach.viz.plotly3d import plot_attack_3d
 
@@ -30,7 +30,7 @@ def test_plot_attack_3d_with_court_traces():
 
 def test_plot_attack_3d_with_window_and_attacker():
     traj = _sample_trajectory()
-    window = position4_high_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     fig = plot_attack_3d(traj, attacker=DEFAULT_AMATEUR_MALE, window=window)
     # With window + attacker we get more traces
     base = len(plot_attack_3d(traj).data)
@@ -39,7 +39,7 @@ def test_plot_attack_3d_with_window_and_attacker():
 
 def test_plot_attack_3d_with_score_shows_breakdown_in_title():
     traj = _sample_trajectory()
-    window = position4_high_window(DEFAULT_AMATEUR_MALE)
+    window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     score = score_high_ball(traj, window)
     fig = plot_attack_3d(traj, attacker=DEFAULT_AMATEUR_MALE, window=window, score=score)
     title = fig.layout.title.text

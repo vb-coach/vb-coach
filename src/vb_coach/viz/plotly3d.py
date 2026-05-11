@@ -134,21 +134,43 @@ def _key_point_markers(traj: Trajectory, contact_index: int | None) -> list[go.S
     return markers
 
 
-def _hit_window_trace(window: HitWindow) -> go.Mesh3d:
-    """Return a translucent box mesh for the hit window."""
+def _hit_window_trace(window: HitWindow, n_phi: int = 24, n_theta: int = 16) -> go.Mesh3d:
+    """Return a translucent surface mesh for the asymmetric-ellipsoid hit window.
+
+    Builds an axis-aligned ellipsoidal surface in spherical parametric form,
+    then applies piecewise scaling so the -y and +y hemispheres use different
+    radii (r_y_front vs r_y_back), and similarly for +z and -z (r_z_up vs
+    r_z_down). The result is a closed surface stitched along the y=center[1]
+    and z=center[2] planes.
+    """
+    theta = np.linspace(0.0, np.pi, n_theta)
+    phi = np.linspace(0.0, 2 * np.pi, n_phi)
+    THETA, PHI = np.meshgrid(theta, phi)
+    x_unit = np.sin(THETA) * np.cos(PHI)
+    y_unit = np.sin(THETA) * np.sin(PHI)
+    z_unit = np.cos(THETA)
+    x_s = window.r_x * x_unit
+    y_s = np.where(y_unit < 0, window.r_y_front * y_unit, window.r_y_back * y_unit)
+    z_s = np.where(z_unit > 0, window.r_z_up * z_unit, window.r_z_down * z_unit)
     cx, cy, cz = float(window.center[0]), float(window.center[1]), float(window.center[2])
-    dx, dy, dz = window.dx, window.dy, window.dz
-    # 8 corners of the box
-    xs = [cx - dx, cx + dx, cx + dx, cx - dx, cx - dx, cx + dx, cx + dx, cx - dx]
-    ys = [cy - dy, cy - dy, cy + dy, cy + dy, cy - dy, cy - dy, cy + dy, cy + dy]
-    zs = [cz - dz, cz - dz, cz - dz, cz - dz, cz + dz, cz + dz, cz + dz, cz + dz]
-    # 12 triangle faces (i, j, k) by indices into xs/ys/zs:
-    i = [0, 0, 4, 4, 0, 0, 1, 1, 2, 2, 3, 3]
-    j = [1, 2, 5, 6, 1, 4, 2, 5, 3, 6, 0, 7]
-    k = [2, 3, 6, 7, 4, 5, 5, 6, 6, 7, 7, 4]
+    x = (x_s + cx).flatten()
+    y = (y_s + cy).flatten()
+    z = (z_s + cz).flatten()
+    i_idx: list[int] = []
+    j_idx: list[int] = []
+    k_idx: list[int] = []
+    for a in range(n_phi - 1):
+        for b in range(n_theta - 1):
+            p00 = a * n_theta + b
+            p01 = a * n_theta + (b + 1)
+            p10 = (a + 1) * n_theta + b
+            p11 = (a + 1) * n_theta + (b + 1)
+            i_idx.extend([p00, p00])
+            j_idx.extend([p10, p11])
+            k_idx.extend([p11, p01])
     return go.Mesh3d(
-        x=xs, y=ys, z=zs, i=i, j=j, k=k,
-        color="green", opacity=0.20, name="hit window",
+        x=x, y=y, z=z, i=i_idx, j=j_idx, k=k_idx,
+        color="green", opacity=0.18, name="hit window",
         hoverinfo="skip",
     )
 
