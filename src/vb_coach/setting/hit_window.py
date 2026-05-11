@@ -1,11 +1,24 @@
 """Hit-window geometry for attack-side analysis.
 
-A HitWindow is an axis-aligned 3D box in world coordinates inside which
-an attacker can effectively contact a ball. Outside the box, contact is
-either physically impossible (out of reach) or tactically ineffective
-(off-axis, mistimed). The shape is a simplification — real swing arcs
-are ellipsoidal — but it captures the dominant constraints (reach
-height, lateral footprint at the antenna, depth window across the net).
+Models the effective-contact envelope around an attacker's optimal contact
+point as an asymmetric axis-aligned ellipsoid. The envelope captures where
+contact with the ball produces a viable spike — not just where the hand
+can geometrically reach.
+
+The asymmetry is literature-backed (see project memory
+`reference_hit_window_biomechanics.md`):
+  - Wagner et al. 2020: +/-20 cm horizontal deviations from optimum cause
+    ~70% increase in shoulder muscle activation (effective tolerance scale).
+  - Coaching consensus + Wagner posterior penalty: contact tolerance is
+    larger toward the net (forward, in the direction of arm swing) than
+    behind the optimum.
+  - Coaching consensus: max approach reach is a hard upper bound (cannot
+    contact above peak); below the optimum, the attacker can lower the
+    jump or contact later in the arc, so down-tolerance is larger.
+
+The body's facing direction is implicitly "toward the net" — i.e., -y for
+a team-A attacker. So the "forward" half-axis applies when
+(p[1] - center[1]) is negative.
 """
 
 from __future__ import annotations
@@ -17,61 +30,66 @@ import numpy as np
 from vb_coach.setting.attacker import Attacker
 
 
-_POSITION4_CONTACT_X: float = -4.0   # near left antenna in world coords
-_POSITION4_CONTACT_Y: float = 0.2    # just on team A's side of net
-_POSITION4_HIGH_DX: float = 0.5      # lateral tolerance along net (m)
-_POSITION4_HIGH_DY: float = 0.3      # depth tolerance across net (m)
-_POSITION4_HIGH_DZ: float = 0.20     # vertical tolerance around contact height (m)
-_POSITION4_HALF_DZ: float = 0.18     # tighter vertical tolerance for 半高
-_POSITION4_SHOOT_DX: float = 0.6     # wider along-net because ball moves fast in x
-_POSITION4_SHOOT_DY: float = 0.25    # depth tolerance for 平拉开
-_POSITION4_SHOOT_DZ: float = 0.18    # vertical tolerance for 平拉开 (flat arc)
+_POSITION4_CONTACT_X: float = -4.0
+_POSITION4_CONTACT_Y: float = 0.2
+
+_AMATEUR_R_X: float = 0.40
+_AMATEUR_R_Y_FRONT: float = 0.30
+_AMATEUR_R_Y_BACK: float = 0.15
+_AMATEUR_R_Z_UP: float = 0.05
+_AMATEUR_R_Z_DOWN: float = 0.30
 
 
 @dataclass
 class HitWindow:
-    """Axis-aligned 3D box defining the attacker's effective contact volume.
+    """Asymmetric axis-aligned ellipsoidal effective-contact envelope.
 
-    Attributes
-    ----------
-    center
-        World-coordinate center of the box, shape (3,).
-    dx, dy, dz
-        Half-extents along each world axis. A point p is inside iff
-        |p[i] - center[i]| <= half_extent[i] for all i.
+    A point p is inside iff
+        (dx / r_x)^2 + (dy / r_y_eff)^2 + (dz / r_z_eff)^2 <= 1
+    where:
+        dx, dy, dz = p - center
+        r_y_eff   = r_y_front if dy < 0 else r_y_back   (forward = -y, world frame)
+        r_z_eff   = r_z_up    if dz > 0 else r_z_down
     """
 
     center: np.ndarray
-    dx: float
-    dy: float
-    dz: float
+    r_x: float
+    r_y_front: float
+    r_y_back: float
+    r_z_up: float
+    r_z_down: float
 
     def __post_init__(self) -> None:
         if self.center.shape != (3,):
             raise ValueError(f"center must have shape (3,), got {self.center.shape}")
+        for name in ("r_x", "r_y_front", "r_y_back", "r_z_up", "r_z_down"):
+            v = getattr(self, name)
+            if v <= 0:
+                raise ValueError(f"{name} must be positive, got {v}")
 
     def contains(self, point: np.ndarray) -> bool:
-        return bool(
-            abs(point[0] - self.center[0]) <= self.dx
-            and abs(point[1] - self.center[1]) <= self.dy
-            and abs(point[2] - self.center[2]) <= self.dz
-        )
+        dx = point[0] - self.center[0]
+        dy = point[1] - self.center[1]
+        dz = point[2] - self.center[2]
+        r_y = self.r_y_front if dy < 0 else self.r_y_back
+        r_z = self.r_z_up if dz > 0 else self.r_z_down
+        return bool((dx / self.r_x) ** 2 + (dy / r_y) ** 2 + (dz / r_z) ** 2 <= 1.0)
 
     def contains_batch(self, points: np.ndarray) -> np.ndarray:
-        diff = np.abs(points - self.center)
-        return (
-            (diff[:, 0] <= self.dx)
-            & (diff[:, 1] <= self.dy)
-            & (diff[:, 2] <= self.dz)
-        )
+        dx = points[:, 0] - self.center[0]
+        dy = points[:, 1] - self.center[1]
+        dz = points[:, 2] - self.center[2]
+        r_y = np.where(dy < 0, self.r_y_front, self.r_y_back)
+        r_z = np.where(dz > 0, self.r_z_up, self.r_z_down)
+        return (dx / self.r_x) ** 2 + (dy / r_y) ** 2 + (dz / r_z) ** 2 <= 1.0
 
 
-def position4_high_window(attacker: Attacker) -> HitWindow:
-    """Hit-window for a 4号位 high-ball attack by the given attacker.
+def position4_hit_window(attacker: Attacker) -> HitWindow:
+    """Hit-window for a 4号位 attack by the given attacker.
 
-    Vertical center = attacker.contact_height. Lateral/depth center is the
-    standard 4号位 attack position near the left antenna, just on team A's
-    side of the net.
+    The same window applies to all 4号位 attack types (高球 / 半高 / 平拉开)
+    — the difference between attack types lives entirely in the score
+    functions' velocity / dwell / drift thresholds, not in geometry.
     """
     center = np.array([
         _POSITION4_CONTACT_X,
@@ -80,37 +98,9 @@ def position4_high_window(attacker: Attacker) -> HitWindow:
     ])
     return HitWindow(
         center=center,
-        dx=_POSITION4_HIGH_DX,
-        dy=_POSITION4_HIGH_DY,
-        dz=_POSITION4_HIGH_DZ,
-    )
-
-
-def position4_half_window(attacker: Attacker) -> HitWindow:
-    """Hit-window for a 4号位 半高 (semi-high) ball attack."""
-    center = np.array([
-        _POSITION4_CONTACT_X,
-        _POSITION4_CONTACT_Y,
-        attacker.contact_height,
-    ])
-    return HitWindow(
-        center=center,
-        dx=_POSITION4_HIGH_DX,
-        dy=_POSITION4_HIGH_DY,
-        dz=_POSITION4_HALF_DZ,
-    )
-
-
-def position4_shoot_window(attacker: Attacker) -> HitWindow:
-    """Hit-window for a 4号位 平拉开 (flat shoot to pin) ball attack."""
-    center = np.array([
-        _POSITION4_CONTACT_X,
-        _POSITION4_CONTACT_Y,
-        attacker.contact_height,
-    ])
-    return HitWindow(
-        center=center,
-        dx=_POSITION4_SHOOT_DX,
-        dy=_POSITION4_SHOOT_DY,
-        dz=_POSITION4_SHOOT_DZ,
+        r_x=_AMATEUR_R_X,
+        r_y_front=_AMATEUR_R_Y_FRONT,
+        r_y_back=_AMATEUR_R_Y_BACK,
+        r_z_up=_AMATEUR_R_Z_UP,
+        r_z_down=_AMATEUR_R_Z_DOWN,
     )
