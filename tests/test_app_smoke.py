@@ -13,5 +13,5 @@ def test_attack_presets_have_required_keys():
     for label, preset in app._ATTACK_PRESETS.items():
         assert "position" in preset
         assert "velocity" in preset
-        assert "window_fn" in preset
         assert "score_fn" in preset
+        assert "window_fn" not in preset

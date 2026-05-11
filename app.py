@@ -20,22 +20,18 @@ from vb_coach.setting.attacks_position4 import (
     score_half_ball,
     score_shoot_ball,
 )
-from vb_coach.setting.hit_window import (
-    position4_high_window,
-    position4_half_window,
-    position4_shoot_window,
-)
+from vb_coach.setting.hit_window import position4_hit_window
 from vb_coach.trajectory import ReleaseState, simulate
 from vb_coach.viz.plotly3d import plot_attack_3d
 
 
 _ATTACK_PRESETS = {
     "高球 (high)":   {"position": (0.5, 0.8, 2.2),  "velocity": (-4.8, -0.5, 5.5),
-                      "window_fn": position4_high_window,  "score_fn": score_high_ball},
+                      "score_fn": score_high_ball},
     "半高 (half)":   {"position": (0.5, 0.8, 2.2),  "velocity": (-6.5, -0.5, 4.5),
-                      "window_fn": position4_half_window,  "score_fn": score_half_ball},
+                      "score_fn": score_half_ball},
     "平拉开 (shoot)": {"position": (-1.5, 0.5, 2.3), "velocity": (-7.5, -0.5, 3.5),
-                      "window_fn": position4_shoot_window, "score_fn": score_shoot_ball},
+                      "score_fn": score_shoot_ball},
 }
 
 
@@ -103,7 +99,7 @@ def main() -> None:
 
     # Simulate
     traj = simulate(release, t_max=3.0)
-    window = preset["window_fn"](attacker)
+    window = position4_hit_window(attacker)
     score = preset["score_fn"](traj, window)
 
     # Main panel layout

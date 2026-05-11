@@ -28,19 +28,13 @@ from vb_coach.setting.attacks_position4 import (
     score_half_ball,
     score_shoot_ball,
 )
-from vb_coach.setting.hit_window import (
-    position4_high_window,
-    position4_half_window,
-    position4_shoot_window,
-)
+from vb_coach.setting.hit_window import position4_hit_window
 from vb_coach.trajectory import ReleaseState, simulate
 
 
 def main() -> None:
     attacker = DEFAULT_AMATEUR_MALE
-    high_win = position4_high_window(attacker)
-    half_win = position4_half_window(attacker)
-    shoot_win = position4_shoot_window(attacker)
+    window = position4_hit_window(attacker)
 
     scenarios = [
         ("high",  np.array([0.5, 0.8, 2.2]),  np.array([-4.8, -0.5, 5.5])),
@@ -58,9 +52,9 @@ def main() -> None:
     print(f"{'set type':>8} | {'high':>8} {'half':>8} {'shoot':>8}")
     print("-" * 42)
     for label, _, _, traj in trajectories:
-        sh = score_high_ball(traj, high_win)
-        sm = score_half_ball(traj, half_win)
-        sf = score_shoot_ball(traj, shoot_win)
+        sh = score_high_ball(traj, window)
+        sm = score_half_ball(traj, window)
+        sf = score_shoot_ball(traj, window)
         print(f"{label:>8} | {sh.score:>8.3f} {sm.score:>8.3f} {sf.score:>8.3f}")
 
     # Build side-view plot
@@ -73,21 +67,18 @@ def main() -> None:
     # Net
     ax.plot([0.0, 0.0], [0.0, NET_HEIGHT_MEN], color="gray", lw=2, label="net")
 
-    # Three hit-window y-z slices (overlapping at y center 0.2, different z extents)
-    for win, name, fill_color in [
-        (high_win, "high window", "tab:blue"),
-        (half_win, "half window", "tab:orange"),
-        (shoot_win, "shoot window", "tab:green"),
-    ]:
-        y0, y1 = win.center[1] - win.dy, win.center[1] + win.dy
-        z0, z1 = win.center[2] - win.dz, win.center[2] + win.dz
-        ax.fill_between([y0, y1], z0, z1, color=fill_color, alpha=0.12,
-                        label=f"{name} y-z slice")
+    # Hit-window y-z slice (unified window shared by all attack types)
+    y0 = window.center[1] - window.r_y_back
+    y1 = window.center[1] + window.r_y_front
+    z0 = window.center[2] - window.r_z_down
+    z1 = window.center[2] + window.r_z_up
+    ax.fill_between([y0, y1], z0, z1, color="gray", alpha=0.18,
+                    label="hit window y-z slice")
 
     ax.axhline(0.0, color="black", lw=0.5)
     ax.set_xlabel("y [m] (across court)")
     ax.set_ylabel("z [m]")
-    ax.set_title("4号位 attacks: three sets, three windows")
+    ax.set_title("4号位 attacks: three sets, unified hit window")
     ax.set_aspect("equal", adjustable="datalim")
     ax.legend(fontsize=8, loc="upper right")
     ax.grid(alpha=0.3)

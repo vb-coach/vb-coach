@@ -26,11 +26,7 @@ from vb_coach.setting.attacks_position4 import (
     score_half_ball,
     score_shoot_ball,
 )
-from vb_coach.setting.hit_window import (
-    position4_high_window,
-    position4_half_window,
-    position4_shoot_window,
-)
+from vb_coach.setting.hit_window import position4_hit_window
 from vb_coach.trajectory import ReleaseState, simulate
 from vb_coach.viz.plotly3d import plot_attack_3d
 
@@ -38,23 +34,23 @@ from vb_coach.viz.plotly3d import plot_attack_3d
 SCENARIOS = [
     ("4号位高球",   "high",
      np.array([0.5, 0.8, 2.2]),  np.array([-4.8, -0.5, 5.5]),
-     position4_high_window,  score_high_ball),
+     score_high_ball),
     ("4号位半高",   "half",
      np.array([0.5, 0.8, 2.2]),  np.array([-6.5, -0.5, 4.5]),
-     position4_half_window,  score_half_ball),
+     score_half_ball),
     ("4号位平拉开", "shoot",
      np.array([-1.5, 0.5, 2.3]), np.array([-7.5, -0.5, 3.5]),
-     position4_shoot_window, score_shoot_ball),
+     score_shoot_ball),
 ]
 
 
 def main() -> None:
     attacker = DEFAULT_AMATEUR_MALE
+    window = position4_hit_window(attacker)
 
-    for label, slug, position, velocity, window_factory, scorer in SCENARIOS:
+    for label, slug, position, velocity, scorer in SCENARIOS:
         release = ReleaseState(position=position, velocity=velocity, spin=np.zeros(3))
         traj = simulate(release, t_max=3.0)
-        window = window_factory(attacker)
         score = scorer(traj, window)
 
         fig = plot_attack_3d(

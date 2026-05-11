@@ -22,7 +22,7 @@ import numpy as np
 from vb_coach.constants import NET_HEIGHT_MEN
 from vb_coach.setting.attacker import DEFAULT_AMATEUR_MALE
 from vb_coach.setting.attacks_position4 import score_high_ball
-from vb_coach.setting.hit_window import position4_high_window
+from vb_coach.setting.hit_window import position4_hit_window
 from vb_coach.trajectory import ReleaseState, simulate
 
 
@@ -31,7 +31,7 @@ _RELEASE_POSITION = np.array([0.5, 0.8, 2.2])
 
 def main() -> None:
     attacker = DEFAULT_AMATEUR_MALE
-    window = position4_high_window(attacker)
+    window = position4_hit_window(attacker)
 
     scenarios = [
         ("good high ball (v0=-4.8,-0.5,5.5)", np.array([-4.8, -0.5, 5.5])),
@@ -60,8 +60,10 @@ def main() -> None:
     ax.plot([0.0, 0.0], [0.0, NET_HEIGHT_MEN], color="gray", lw=2, label="net")
 
     # Hit-window y-z slice (at the window's x center)
-    y0, y1 = window.center[1] - window.dy, window.center[1] + window.dy
-    z0, z1 = window.center[2] - window.dz, window.center[2] + window.dz
+    y0 = window.center[1] - window.r_y_back
+    y1 = window.center[1] + window.r_y_front
+    z0 = window.center[2] - window.r_z_down
+    z1 = window.center[2] + window.r_z_up
     ax.fill_between([y0, y1], z0, z1, color="green", alpha=0.18,
                     label="hit window (y-z slice)")
 
