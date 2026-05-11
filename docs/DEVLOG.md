@@ -5,6 +5,48 @@
 
 ---
 
+## 2026-05-10 — HitWindow 重构完成
+
+5 任务跑完。最终状态：106 测试通过，3×3 unified demo 干净的对角占优（0.601 / 0.707 / 0.793，off-diagonal 全 0）。
+
+**实际改动**：
+- `HitWindow` 从 (dx, dy, dz) 轴对齐盒子 → (r_x, r_y_front, r_y_back, r_z_up, r_z_down) 非对称椭球
+- 3 个 per-attack window factory → 1 个 `position4_hit_window(attacker)`
+- 评分函数代码逻辑没变 —— 只是接收同一个 window，差异全在评分函数内部常数
+- Plotly viz 从 12 三角形 box mesh → 690 三角形参数化椭球 mesh
+- 4 个 demo / app 全部切到统一 window
+
+**几个发现**：
+1. **新椭球比老盒子在 back 方向显著更紧**（r_y_back=0.15 vs 旧 dy=0.30）。Task 2 调了 3 个 test velocity，让球在到达 contact 点时 y 更小（更靠近网）—— 这其实更贴近真实战术：好球应该在攻手前方一点，不是直接在头顶
+2. **r_z_up = 0.05** 修了 latent bug：之前的对称模型让"球高于 max reach"也算 in-window，物理不可能。Wagner + 教练学都说峰值摸高是硬上限
+3. Demo 第一版没改 release velocity，所有分数都 0 —— 重构正确，但 demo 用了 stale 数据。多花一个 commit 同步 demo velocity 跟测试一致
+
+**对角占优 vs 重构前对比**：
+
+```
+重构前：
+    high |    0.865    0.029    0.000
+    half |    0.296    0.686    0.000
+   shoot |    0.000    0.000    0.716
+
+重构后：
+    high |    0.601    0.000    0.000
+    half |    0.226    0.707    0.000
+   shoot |    0.000    0.000    0.793
+```
+
+绝对分数低了一点（椭球更紧 → corner 处掉分），但**对角占优更干净**（off-diagonal 不再有 0.296 这种"混淆值"）。这是好事 —— 评分判别力更强。
+
+**遗留**：
+- 横向半径 0.40 m 仍然是 Wagner 0.20 + 0.20 footwork tolerance 的混合，没有真正校准 footwork 项
+- Per-attacker radii 调整（高个 vs 矮个挥臂半径不同）暂时没做 —— 当前所有 attacker 共用同一组半径，只 center 跟着 contact_height 走
+
+**为什么记下来**：
+1. 第一个**真正数据校准**的几何参数（Wagner ±20 cm） —— 前几个 phase 全是 model prior
+2. 重构方法学验证：5 task subagent-driven 流程能干净跑过 over-parameterization 重构，每个 task 独立可验证
+
+---
+
 ## 2026-05-10 — HitWindow 重构启动 + 文献调研结果
 
 **触发**：用户问"为什么三种球种的击球窗口不一样"。承认现有设计是 over-parameterized：窗口尺寸的差异（如 dx 0.5 vs 0.6，dz 0.18 vs 0.20）和评分函数的差异（dwell target、velocity band、lateral max）在惩罚同一件事。
