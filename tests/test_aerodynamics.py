@@ -27,8 +27,8 @@ def test_spin_parameter_zero_velocity_returns_zero():
 
 
 def test_cd_subcritical_constant_placeholder():
-    assert cd_subcritical(50_000) == 0.45
-    assert cd_subcritical(100_000) == 0.45
+    assert cd_subcritical(50_000) == 0.50
+    assert cd_subcritical(100_000) == 0.50
 
 
 def test_cl_magnus_zero_spin_zero_lift():
@@ -45,31 +45,31 @@ def test_cl_magnus_linear_below_saturation():
 
 
 def test_cd_full_regime_subcritical_band():
-    # Re below the drag crisis: Cd plateau at 0.45
-    assert cd_full_regime(50_000) == 0.45
-    assert cd_full_regime(100_000) == 0.45
-    assert cd_full_regime(150_000) == 0.45
+    # Re below the drag crisis: Cd plateau at 0.50 (Hong 2018)
+    assert cd_full_regime(50_000) == 0.50
+    assert cd_full_regime(150_000) == 0.50
+    assert cd_full_regime(200_000) == 0.50
 
 
 def test_cd_full_regime_supercritical_band():
-    # Re above the drag crisis: Cd plateau at 0.18
-    assert cd_full_regime(250_000) == 0.18
-    assert cd_full_regime(500_000) == 0.18
+    # Re above the drag crisis: Cd plateau at 0.16 (Hong & Asai 2020)
+    assert cd_full_regime(330_000) == 0.16
+    assert cd_full_regime(500_000) == 0.16
 
 
 def test_cd_full_regime_critical_band_monotonic():
-    # Smooth cosine taper across 1.5e5 < Re < 2.5e5
-    cd_low = cd_full_regime(1.6e5)
-    cd_mid = cd_full_regime(2.0e5)
-    cd_high = cd_full_regime(2.4e5)
+    # Smooth cosine taper across 2.0e5 < Re < 3.3e5
+    cd_low = cd_full_regime(2.1e5)
+    cd_mid = cd_full_regime(2.65e5)
+    cd_high = cd_full_regime(3.2e5)
     assert cd_low > cd_mid > cd_high
     # Midpoint should be the average of the two plateaus
-    assert math.isclose(cd_mid, 0.5 * (0.45 + 0.18), abs_tol=0.005)
+    assert math.isclose(cd_mid, 0.5 * (0.50 + 0.16), abs_tol=0.005)
 
 
 def test_cd_full_regime_continuous_at_band_edges():
     # Just inside the critical band should match the plateau value
     # (continuity check on the cosine taper)
     eps = 1.0
-    assert math.isclose(cd_full_regime(1.5e5 + eps), 0.45, abs_tol=1e-5)
-    assert math.isclose(cd_full_regime(2.5e5 - eps), 0.18, abs_tol=1e-5)
+    assert math.isclose(cd_full_regime(2.0e5 + eps), 0.50, abs_tol=1e-5)
+    assert math.isclose(cd_full_regime(3.3e5 - eps), 0.16, abs_tol=1e-5)

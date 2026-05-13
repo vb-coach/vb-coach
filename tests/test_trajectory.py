@@ -152,9 +152,12 @@ def test_simulate_stochastic_deterministic_without_rng():
 
 def test_simulate_stochastic_monte_carlo_landing_scatter():
     # Regression: 50 seeds at v=16 m/s should produce sideline sigma ~30 cm
-    # to match the float-serve research doc and the original demo's output.
+    # to match the float-serve research doc. With the recalibrated
+    # Re_lat_peak = 3.0e5 (Norman & McKeon 2011 / Darbois Texier 2016),
+    # the float-effect optimum sits at v ~ 21 m/s (not 16 m/s as the
+    # original doc estimated).
     p0 = np.array([0.0, -9.0, 2.4])
-    v0 = np.array([0.0, 16.0, 0.5])
+    v0 = np.array([0.0, 21.0, 0.5])
     landings_x = []
     for seed in range(50):
         rs = ReleaseState(

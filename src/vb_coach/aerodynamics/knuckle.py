@@ -17,13 +17,19 @@ from dataclasses import dataclass
 import numpy as np
 
 
-# Coherence time of the lateral force process. Matches Cohen 2014
-# high-speed video measurements of float-serve lateral wobble.
-TAU_KNUCKLE: float = 0.25
+# Coherence time of the lateral force process. Darbois Texier et al. 2016
+# (NJP 18:073027) section 4.1 gives lambda/U ~ 8m / 16 m/s ~ 0.5 s and
+# their Table 2 row "Volleyball" gives tau ~ 0.33 s; we adopt 0.35 s as
+# the representative value across the drag-crisis band.
+TAU_KNUCKLE: float = 0.35
 
 
-_CL_LAT_PEAK: float = 0.12
-_RE_LAT_PEAK: float = 2.0e5
+# Norman & McKeon 2011 (Exp Fluids 51:1439) report z-direction RMS Cl
+# peaking at 0.10-0.11 at Re ~ 3.0e5, falling to ~0.05 in the subcritical
+# band and ~0.03 in the deep supercritical. Re_lat_peak is co-located
+# with the drag-crisis center (Darbois Texier 2016 fig 7b).
+_CL_LAT_PEAK: float = 0.10
+_RE_LAT_PEAK: float = 3.0e5
 _RE_LAT_WIDTH: float = 0.6e5
 
 

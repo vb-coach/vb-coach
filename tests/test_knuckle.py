@@ -11,22 +11,23 @@ from vb_coach.aerodynamics.knuckle import (
 )
 
 
-def test_cl_lat_rms_peak_at_2e5():
-    # Gaussian peak at Re = 2.0e5; max value should be the documented 0.12
-    cl_peak = cl_lat_rms(2.0e5)
-    assert math.isclose(cl_peak, 0.12, abs_tol=1e-6)
+def test_cl_lat_rms_peak_at_drag_crisis():
+    # Gaussian peak at Re = 3.0e5 (Norman & McKeon 2011; Darbois Texier
+    # 2016 fig 7b); max value 0.10.
+    cl_peak = cl_lat_rms(3.0e5)
+    assert math.isclose(cl_peak, 0.10, abs_tol=1e-6)
 
 
 def test_cl_lat_rms_decays_far_from_peak():
     # Far below and far above the critical band: Cl_lat -> ~0
     assert cl_lat_rms(50_000) < 0.01
-    assert cl_lat_rms(500_000) < 0.01
+    assert cl_lat_rms(600_000) < 0.01
 
 
 def test_cl_lat_rms_symmetric_around_peak():
     # Gaussian shape: equal distance below and above peak should give equal Cl
-    cl_low = cl_lat_rms(2.0e5 - 0.3e5)
-    cl_high = cl_lat_rms(2.0e5 + 0.3e5)
+    cl_low = cl_lat_rms(3.0e5 - 0.3e5)
+    cl_high = cl_lat_rms(3.0e5 + 0.3e5)
     assert math.isclose(cl_low, cl_high, abs_tol=1e-6)
 
 
