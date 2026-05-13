@@ -5,6 +5,41 @@
 
 ---
 
+## 2026-05-13 — Prior 文献校准扫盘
+
+**触发**：用户问"哪些 prior 有论文或网络帖子做过研究，可以校准我们的模型"。承认 README 早就标了"评分模型是 prior, 不是 calibrated"——但具体哪些 prior 已经有数据可校准、哪些还是直觉，没系统盘过。
+
+**方法**：派 4 个并行研究 agent，覆盖（1）气动 + Magnus + 飘球；（2）二传/扣球运动学；（3）攻手体型与跳跃；（4）评分判据与教练经验。每个 agent 都被告知现有 prior 数值，专注于补全空白与验证。
+
+**主要发现**：
+
+1. **气动层有大量精确文献可校准**（Hong 2018, Norman & McKeon 2011, Darbois Texier 2016）。我们之前的 Cd 和 Cl_lat 常数数量级正确但偏差明显——亚临界 Cd 是 0.50 而不是 0.45，drag crisis 中心在 Re ≈ 2.65×10⁵ 而不是 ~2×10⁵，横向力 RMS 峰值在 Re ≈ 3×10⁵ 而不是 2×10⁵。这些值改完后**飘球最佳速度从 16 m/s 移到 20–21 m/s**，更符合"职业男排发球最飘"的经验。
+
+2. **攻手 contact_loss 实测是 18–22 cm**（Sheppard 2008 AIS in-game data），不是我们之前估的 15 cm。Wagner 2014 + Coleman 1993 等都给出 spike contact 距网平面 0.2–0.5 m，跟我们 0.2 m 一致。
+
+3. **评分函数的 9 个常数（dwell × 3、velocity_best × 3、lateral_max × 3）几乎全是 data gap**。物理推导可以自洽（抛物线 + Wagner ±20 cm），但**没有任何论文测过球 v_z vs spike outcome、ball-in-window dwell time、attacker subjective rating**。Wagner 2020 还是项目里唯一真正校准的几何参数。
+
+**应用了哪些**：
+- `drag.py`：Cd_sub 0.45 → 0.50；Re_crit 1.5e5–2.5e5 → 2.0e5–3.3e5；Cd_super 0.18 → 0.16
+- `knuckle.py`：Cl_lat_peak 0.12 → 0.10；Re_lat_peak 2.0e5 → 3.0e5；τ_knuckle 0.25 → 0.35 s
+- `attacker.py`：DEFAULT_CONTACT_LOSS 0.15 → 0.20；新增 6 个 preset（RECREATIONAL_MALE、COLLEGE_MALE/FEMALE、ELITE_MALE/FEMALE 等，Palao 2014 锚定）
+- 测试同步更新（106 测试全过）
+
+**没应用的**（中置信度，留底）：
+- Magnus `_CL_HALF_SATURATION_S` 0.25 → 0.15（Kao 1994 排球专测，但只覆盖发球速度区间）
+- `_HALF_VELOCITY_BEST` -2.5 → -3.0（物理推导，无实验）
+- `_SHOOT_VELOCITY_BAND` 1.5 → 1.0（战术文献描述，无定量）
+- 4号位接触点 x −4.0 → −3.5（教练学共识，无 peer-reviewed）
+
+**飘球速度迁移**：原 [float-serve.md](research/float-serve.md) 整篇基于"飘最厉害在 v=16 m/s, Re ≈ 2×10⁵"。新常数把临界中心移到 3×10⁵ → 飘最厉害在 v ≈ 21 m/s。在 float-serve.md 顶部加了校准注释，正文具体数字保留没动（结构性结论仍正确，只需把数字读上调一档）。Demo 没动；如果未来重跑飘球研究 demo，应该用 v ≈ 20 m/s 而非 16 m/s。
+
+**为什么记下来**：
+1. 第一次系统区分"已有文献支持的 prior" vs "纯直觉" vs "data gap"。建立了 [calibration-priors.md](research/calibration-priors.md) 作为以后改任何常数的 reference checklist。
+2. 飘球速度从 16 → 21 m/s 是 nontrivial 的物理修正——之前的 prior 在面板球与光滑球的 Re_crit 差异上估错了（30% 偏低）。
+3. 评分函数的 data gap 现在显式列出来了。下一步要么接受 prior 不变（标"未校准"），要么做 200-回合标注实验。
+
+---
+
 ## 2026-05-10 — HitWindow 重构完成
 
 5 任务跑完。最终状态：106 测试通过，3×3 unified demo 干净的对角占优（0.601 / 0.707 / 0.793，off-diagonal 全 0）。
