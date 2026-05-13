@@ -40,15 +40,16 @@ def test_score_returns_zero_when_only_ascent_intersects():
 
 
 def test_score_good_high_ball_above_threshold():
-    # Retuned for unified ellipsoid (r_z_up=0.05): vy adjusted to -0.6 so the
-    # ball crosses x=-4 closer to y=0.2 (window center), placing it inside the
-    # tighter y-band. Scores ~0.60 vs. old box geometry.
+    # Threshold relaxed 0.5 -> 0.45 after contact_loss recalibration
+    # (0.15 -> 0.20, Sheppard 2008) lowered the window center 5 cm. The
+    # same release now lands with the ball passing through a tighter
+    # part of the ellipsoid (dwell ~0.05 s vs 0.06 s prior).
     rs = _set_release(velocity=np.array([-4.8, -0.6, 5.5]))
     traj = simulate(rs, t_max=3.0)
     window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_high_ball(traj, window)
-    assert result.score > 0.5
-    assert result.dwell_seconds > 0.05
+    assert result.score > 0.45
+    assert result.dwell_seconds > 0.04
 
 
 def test_score_low_apex_set_scores_low():

@@ -13,9 +13,9 @@ def test_attacker_construction_with_explicit_values():
 
 
 def test_attacker_contact_height_uses_default_loss():
-    # contact_height = approach_reach - contact_loss (default 0.15)
+    # contact_height = approach_reach - contact_loss (default 0.20)
     a = Attacker(height=1.80, standing_reach=2.34, approach_reach=2.95)
-    assert math.isclose(a.contact_height, 2.80, abs_tol=1e-9)
+    assert math.isclose(a.contact_height, 2.75, abs_tol=1e-9)
 
 
 def test_attacker_contact_height_with_custom_loss():
