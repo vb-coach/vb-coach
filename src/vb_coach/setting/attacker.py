@@ -1,8 +1,9 @@
 """Attacker physical parameters.
 
 Captures the height-related inputs needed to determine where in 3D space an
-attacker can effectively strike a ball. Biomechanics (approach speed, jump
-timing) is deferred to Phase B; this module is purely geometric.
+attacker can effectively strike a ball, plus a `level` tag that proxies
+the speed of in-game footwork adjustment (used by hit-window geometry).
+Biomechanics (approach speed, jump timing) is deferred to Phase B.
 
 Preset anthropometry values are anchored to Palao, Manzanares & Valades
 2014 (J Hum Kinetics, n=1440 male / 1459 female FIVB-level players);
@@ -13,6 +14,9 @@ Sattler et al. 2015 (JSCR, Slovenian D1/D2 jump data); and Pocek et al.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
+
+Level = Literal["amateur", "college", "elite"]
 
 
 # Sheppard et al. 2008 (AIS) report in-game contact height = spike reach
@@ -39,12 +43,18 @@ class Attacker:
         Distance from approach_reach down to ball center at contact
         (ball radius 10.5 cm + hand wrap ~5 cm + arm/shoulder non-full
         extension ~5 cm). 20 cm by default (Sheppard 2008).
+    level
+        Footwork-speed proxy: "amateur" / "college" / "elite". Used by
+        the hit-window factory to widen the along-net half-axis for
+        slower-adjusting players (amateur: +20 cm footwork tolerance
+        over Wagner's pure-contact 20 cm; elite: +5 cm).
     """
 
     height: float
     standing_reach: float
     approach_reach: float
     contact_loss: float = DEFAULT_CONTACT_LOSS
+    level: Level = "amateur"
 
     def __post_init__(self) -> None:
         if self.standing_reach <= self.height:
@@ -85,6 +95,7 @@ COLLEGE_MALE: Attacker = Attacker(
     height=1.90,
     standing_reach=2.48,
     approach_reach=3.20,
+    level="college",
 )
 
 # Elite male outside hitter (Palao 2014 OH median: height 1.97 m, spike
@@ -94,6 +105,7 @@ ELITE_MALE: Attacker = Attacker(
     standing_reach=2.58,
     approach_reach=3.45,
     contact_loss=0.22,
+    level="elite",
 )
 
 # Recreational female club player.
@@ -110,6 +122,7 @@ COLLEGE_FEMALE: Attacker = Attacker(
     standing_reach=2.35,
     approach_reach=2.95,
     contact_loss=0.18,
+    level="college",
 )
 
 # Elite female OH (Palao 2014 OH median: 1.84 m / 3.05 m spike reach).
@@ -118,4 +131,5 @@ ELITE_FEMALE: Attacker = Attacker(
     standing_reach=2.39,
     approach_reach=3.05,
     contact_loss=0.20,
+    level="elite",
 )

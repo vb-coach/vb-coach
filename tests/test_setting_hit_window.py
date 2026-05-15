@@ -4,7 +4,11 @@ import numpy as np
 import pytest
 
 from vb_coach.setting.attacker import DEFAULT_AMATEUR_MALE
-from vb_coach.setting.hit_window import HitWindow, position4_hit_window
+from vb_coach.setting.hit_window import (
+    HitWindow,
+    position2_hit_window,
+    position4_hit_window,
+)
 
 
 def test_hit_window_contains_center():
@@ -106,5 +110,44 @@ def test_position4_hit_window_taller_attacker_higher_center():
     short_w = position4_hit_window(short_a)
     tall_w = position4_hit_window(tall_a)
     assert tall_w.center[2] > short_w.center[2]
+    # Same level defaults: r_x identical
     assert short_w.r_x == tall_w.r_x
     assert short_w.r_y_front == tall_w.r_y_front
+
+
+def test_position4_hit_window_elite_has_tighter_r_x_than_amateur():
+    # Footwork tolerance: amateur +20 cm, college +10, elite +5
+    from vb_coach.setting.attacker import Attacker
+    amateur = Attacker(height=1.80, standing_reach=2.34, approach_reach=2.95)
+    college = Attacker(height=1.80, standing_reach=2.34, approach_reach=2.95, level="college")
+    elite   = Attacker(height=1.80, standing_reach=2.34, approach_reach=2.95, level="elite")
+    w_amateur = position4_hit_window(amateur)
+    w_college = position4_hit_window(college)
+    w_elite   = position4_hit_window(elite)
+    assert math.isclose(w_amateur.r_x, 0.40)
+    assert math.isclose(w_college.r_x, 0.30)
+    assert math.isclose(w_elite.r_x,   0.25)
+    # Other radii unchanged across levels (footwork only affects along-net)
+    assert w_amateur.r_y_front == w_elite.r_y_front
+    assert w_amateur.r_z_up == w_elite.r_z_up
+
+
+def test_position2_hit_window_mirrors_position4():
+    # 2号位 is the right-pin mirror of 4号位 across the net center.
+    a = DEFAULT_AMATEUR_MALE
+    w4 = position4_hit_window(a)
+    w2 = position2_hit_window(a)
+    assert math.isclose(w2.center[0], -w4.center[0])      # mirror x
+    assert math.isclose(w2.center[1],  w4.center[1])      # same y
+    assert math.isclose(w2.center[2],  w4.center[2])      # same z
+    assert w2.r_x        == w4.r_x
+    assert w2.r_y_front  == w4.r_y_front
+    assert w2.r_y_back   == w4.r_y_back
+    assert w2.r_z_up     == w4.r_z_up
+    assert w2.r_z_down   == w4.r_z_down
+
+
+def test_position2_hit_window_at_right_antenna():
+    a = DEFAULT_AMATEUR_MALE
+    w = position2_hit_window(a)
+    assert 3.5 < w.center[0] < 4.5    # right side of net (positive x)
