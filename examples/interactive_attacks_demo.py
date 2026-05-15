@@ -33,7 +33,7 @@ from vb_coach.viz.plotly3d import plot_attack_3d
 
 SCENARIOS = [
     ("4号位高球",   "high",
-     np.array([0.5, 0.8, 2.2]),  np.array([-4.8, -0.6, 5.5]),
+     np.array([0.5, 0.8, 2.2]),  np.array([-5.0, -0.7, 5.5]),
      score_high_ball),
     ("4号位半高",   "half",
      np.array([0.5, 0.8, 2.2]),  np.array([-7.0, -0.75, 4.4]),
