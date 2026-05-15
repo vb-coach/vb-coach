@@ -22,12 +22,15 @@
 - **亚临界 + 超临界气动**：`cd_full_regime(Re)` 跨 drag crisis，亚临界用 Cd=0.45（文献支持），飘球区段用余弦过渡 ([aerodynamics/drag.py](src/vb_coach/aerodynamics/drag.py))
 - **飘球随机模型**：`simulate_stochastic()` 用 symplectic Euler + Ornstein-Uhlenbeck 过程模拟 panel 引起的横向涡脱落 ([aerodynamics/knuckle.py](src/vb_coach/aerodynamics/knuckle.py))
 
-### 攻击评分（4号位）
-- **Attacker 模型**：身高 + 站立摸高 + 助跑摸高 → 击球高度 ([attacker.py](src/vb_coach/setting/attacker.py))
-- **三种球种评分函数** ([attacks_position4.py](src/vb_coach/setting/attacks_position4.py))：
+### 攻击评分（4 号位 + 2 号位 pin attacks）
+- **Attacker 模型**：身高 + 站立摸高 + 助跑摸高 + level → 击球高度 + 窗口宽度 ([attacker.py](src/vb_coach/setting/attacker.py))
+  - 7 个 preset：业余 / 大学 / 精英 × 男 / 女（Palao 2014 anthropometry 锚定）
+  - `level` 影响 HitWindow 沿网半径：amateur +20 cm / college +10 / elite +5 cm 的 footwork tolerance
+- **三种球种评分函数** ([attacks_position4.py](src/vb_coach/setting/attacks_position4.py)，pin-attack agnostic)：
   - `score_high_ball()` — **高球**（下降段击球，v_z ≈ -4 m/s）
   - `score_half_ball()` — **半高**（下降段早期击球，v_z ≈ -2.5 m/s）
   - `score_shoot_ball()` — **平拉开**（接近顶点击球，v_z ≈ 0）
+- **HitWindow 工厂**：`position4_hit_window(attacker)` 和 `position2_hit_window(attacker)`（镜像）
 - 每个返回 `score ∈ [0, 1]` + 诊断字段（停留时间 / 击球时 v_z / 横向漂移）
 - 评分模型：`score = dwell_score × velocity_score × lateral_score`（任一为 0 总分为 0）
 
@@ -95,11 +98,13 @@ tests/                    pytest 测试套件（105 个测试）
 - [x] **Phase A1.1** — Attacker + HitWindow + 4号位高球评分
 - [x] **Phase A1.2** — 4号位 半高 + 平拉开评分
 - [x] **Phase A6** — Plotly 3D 可视化 + Streamlit 交互式 app
-- [ ] **HitWindow 重构** — 当前的轴对齐盒子是 over-parameterized；改成基于挥臂弧线的椭球/球冠模型（文献调研中）
-- [ ] **Phase A2** — 2号位 attacks（镜像 4号位）
-- [ ] **Phase A3** — 3号位 快攻（近体快 / 背快 / 背飞 / 短平）
+- [x] **HitWindow 重构** — 非对称椭球（Wagner 2020 ±20 cm 锚定）
+- [x] **Prior 校准扫盘** — Hong 2018 / Norman & McKeon 2011 等校准 drag + knuckle + contact_loss；level-dependent footwork tolerance
+- [x] **Phase A2** — 2 号位 attacks（4 号位镜像）
+- [ ] **Phase A3** — 3 号位 快攻（近体快 / 背快 / 背飞 / 短平）
 - [ ] **Phase A4** — 后排攻
 - [ ] **Phase A5** — 攻手适配层（输入 attacker 参数 → 自动推荐最优球种）
+- [ ] **评分函数数据校准** — 通过 200-回合视频标注实验填掉 dwell / v_z / drift 真实数据空白（[annotation-protocol.md](docs/research/annotation-protocol.md)）
 - [ ] **Phase B**（推迟）— 二传身体动作 → 释放状态的逆向研究
 
 ## 重要说明
