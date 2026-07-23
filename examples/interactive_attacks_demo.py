@@ -1,17 +1,16 @@
-"""Interactive demo: 4号位 high / half / shoot attacks in Plotly 3D HTML.
+"""Interactive animated demo: 4号位 high / half / shoot attacks in Plotly 3D HTML.
 
 Generates one HTML file per attack type. Each file is browser-renderable
-(double-click to open) and shows the court, the trajectory color-graded
-by time, the hit window as a translucent box, and the attacker silhouette,
-with hover tooltips and a score breakdown in the title.
+(double-click to open) and shows the court, moving ball, growing trail,
+the hit window, attacker silhouette, hover tooltips, and score breakdown.
 
 Run:
     uv run python examples/interactive_attacks_demo.py
 
 Produces (in current directory):
-    interactive_position4_high.html
-    interactive_position4_half.html
-    interactive_position4_shoot.html
+    animated_position4_high.html
+    animated_position4_half.html
+    animated_position4_shoot.html
 """
 
 from __future__ import annotations
@@ -28,7 +27,7 @@ from vb_coach.setting.attacks_position4 import (
 )
 from vb_coach.setting.hit_window import position4_hit_window
 from vb_coach.trajectory import ReleaseState, simulate
-from vb_coach.viz.plotly3d import plot_attack_3d
+from vb_coach.viz.plotly3d import AnimationConfig, plot_trajectory_animation
 
 
 SCENARIOS = [
@@ -53,15 +52,16 @@ def main() -> None:
         traj = simulate(release, t_max=3.0)
         score = scorer(traj, window)
 
-        fig = plot_attack_3d(
+        fig = plot_trajectory_animation(
             traj,
             attacker=attacker,
             window=window,
             score=score,
             title=label,
+            config=AnimationConfig(frame_count=70, frame_duration_ms=35),
         )
 
-        filename = f"interactive_position4_{slug}.html"
+        filename = f"animated_position4_{slug}.html"
         fig.write_html(filename, include_plotlyjs="cdn")
         size_kb = os.path.getsize(filename) / 1024
         print(f"{label:>12}: score={score.score:.3f}  ->  {filename}  ({size_kb:.1f} KB)")

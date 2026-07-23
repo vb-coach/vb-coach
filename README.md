@@ -36,8 +36,12 @@
 
 ### 可视化
 - **静态 matplotlib 图**（侧视图 + 3D，[plotting.py](src/vb_coach/plotting.py)）
-- **交互式 Plotly 3D**（浏览器可旋转 / 缩放 / 悬停，[plotly3d.py](src/vb_coach/viz/plotly3d.py)）
-- **Streamlit 本地 web app**（滑块调参 + 实时 3D 渲染 + 评分卡，[app.py](app.py)）
+- **交互式 Plotly 3D**（浏览器可旋转 / 缩放 / 悬停 / 播放动画，[plotly3d.py](src/vb_coach/viz/plotly3d.py)）
+- **通用动画接口**：`plot_trajectory_animation(traj, ...)` 只依赖 `Trajectory`，可复用于发球、二传、扣球等任意场景
+- **可调播放速度**：每个动画内置 `0.5x / 1x / 2x / Pause`，时间轴也可逐帧拖动
+- **飘球对照轨迹**：随机飘球与无随机侧向力的虚线轨迹同图显示，直接观察横向偏移
+- **米制 Three.js 人眼视角**：18×9 m 场地、5 cm 场线、1 m 网面、21 cm 球体均按真实尺寸建模；透视相机支持接发球员 / 发球员 / 全场机位和眼高、横向站位、俯仰角、视场角参数 ([threejs.py](src/vb_coach/viz/threejs.py))
+- **Streamlit 本地 web app**（进攻评分 + 飘球发球两种场景，发球默认人眼视角并可切回 Plotly 分析视角，[app.py](app.py)）
 
 ### 飘球研究
 独立研究分支，结论：飘球速度范围 13-20 m/s，最佳临界 Re ≈ 1.5-2.5×10⁵，σ_x 约 30 cm landing scatter ([docs/research/float-serve.md](docs/research/float-serve.md))。
@@ -48,21 +52,22 @@
 # 安装（用 uv）
 uv sync
 
-# 跑所有测试（应该 105 通过）
+# 跑所有测试（应该 120 通过）
 uv run pytest -q
 
 # 静态示例
 uv run python examples/basic_set.py                      # 4号位高球轨迹
 uv run python examples/position4_all_attacks_demo.py     # 3 种球种 × 3 轨迹评分对比
-uv run python examples/float_serve_demo.py               # 三种飘球轨迹 + 蒙特卡洛
-uv run python examples/interactive_attacks_demo.py       # 生成 3 个交互式 HTML
+uv run python examples/float_serve_demo.py               # 三种飘球轨迹 + 蒙特卡洛 + 3D 动画
+uv run python examples/animated_trajectory_demo.py       # 通用动态轨迹 HTML
+uv run python examples/interactive_attacks_demo.py       # 生成 3 个攻击动画 HTML
 
 # 交互式 web app（推荐先玩这个）
 uv run streamlit run app.py
 # 然后浏览器打开 http://localhost:8501
 ```
 
-Streamlit 里能拖滑块改：攻手身高 / 摸高 / 击球损失、二传释放位置 (x/y/z) / 速度 / 旋转、球种、网高。3D 图实时更新。
+Streamlit 里可以切换“进攻”和“飘球发球”。进攻场景可调攻手、二传释放状态、球种和网高；发球场景可调球速、击球高度、垂直/横向速度、旋转、飘移随机力和随机种子。人眼视角可切换接发球员 / 发球员 / 全场机位，并调整眼高、站位、俯仰角和视场角；动画支持 `0.5x / 1x / 2x` 播放或拖动时间轴。
 
 ## 项目结构
 
@@ -81,14 +86,15 @@ src/vb_coach/
     hit_window.py         击球窗口几何
     attacks_position4.py  4号位评分函数
   plotting.py             matplotlib 2D/3D
-  viz/plotly3d.py         Plotly 交互式 3D
+  viz/plotly3d.py         Plotly 交互式 3D + 动画
+  viz/threejs.py          米制 Three.js 场地 + 人眼透视相机
 app.py                    Streamlit web app
 docs/PLAN.md              总体规划
 docs/DEVLOG.md            开发日志（决策记录）
 docs/research/            研究文档（飘球等）
 docs/superpowers/plans/   实施计划档案
-examples/                 可运行示例 + 飘球研究 demo
-tests/                    pytest 测试套件（105 个测试）
+examples/                 可运行示例 + 动画 HTML + 飘球研究 demo
+tests/                    pytest 测试套件（120 个测试）
 ```
 
 ## 路线图
@@ -105,6 +111,8 @@ tests/                    pytest 测试套件（105 个测试）
 - [ ] **Phase A4** — 后排攻
 - [ ] **Phase A5** — 攻手适配层（输入 attacker 参数 → 自动推荐最优球种）
 - [ ] **评分函数数据校准** — 通过 200-回合视频标注实验填掉 dwell / v_z / drift 真实数据空白（[annotation-protocol.md](docs/research/annotation-protocol.md)）
+- [ ] **真实场地材质** — PBR 地板、体育馆环境、网柱/球网模型与灯光
+- [ ] **真实排球材质** — 官方球款 UV 贴图，通过 `ball_texture_url` 接口加载
 - [ ] **Phase B**（推迟）— 二传身体动作 → 释放状态的逆向研究
 
 ## 重要说明
@@ -116,12 +124,12 @@ tests/                    pytest 测试套件（105 个测试）
 
 ## 技术栈
 
-Python 3.11+ / numpy / scipy / matplotlib / plotly / streamlit / pytest / uv
+Python 3.11+ / numpy / scipy / matplotlib / plotly / streamlit / Three.js / pytest / uv
 
 ## 测试
 
 ```bash
-uv run pytest -q        # 全部 105 测试
+uv run pytest -q        # 全部 120 测试
 uv run pytest -v        # 详细输出
 ```
 

@@ -3,7 +3,7 @@
 Reproduces the three canonical float-serve trajectory types from
 docs/research/float-serve.md, using the vb_coach trajectory engine:
 
-    (A) Persistent wobble   - release v ~ 15 m/s, full flight in critical band
+    (A) Critical-band wobble - release v ~ 21 m/s, strongest visible drift
     (B) Drop floater        - release v ~ 19 m/s, crosses critical band
     (C) Below sweet spot    - release v ~ 13 m/s, sags but does not float
 
@@ -15,6 +15,9 @@ Run:
 Outputs:
     docs/research/figures/float_trajectories.png
     docs/research/figures/float_montecarlo.png
+    docs/research/figures/animated_float_persistent.html
+    docs/research/figures/animated_float_drop.html
+    docs/research/figures/animated_float_below_sweet_spot.html
 """
 
 from __future__ import annotations
@@ -29,7 +32,9 @@ import numpy as np
 
 from vb_coach.aerodynamics import cd_full_regime, cl_lat_rms
 from vb_coach.constants import BALL_DIAMETER, NU_AIR
+from vb_coach.serving import CANONICAL_FLOAT_SERVES
 from vb_coach.trajectory import ReleaseState, simulate_stochastic
+from vb_coach.viz.plotly3d import AnimationConfig, plot_trajectory_animation
 
 
 def _release(v0_mag: float, z0: float = 2.4, vz: float = 0.5) -> ReleaseState:
@@ -41,19 +46,28 @@ def _release(v0_mag: float, z0: float = 2.4, vz: float = 0.5) -> ReleaseState:
     )
 
 
-def plot_canonical() -> plt.Figure:
-    scenarios = [
-        ("A: persistent wobble (v0=15)", _release(15.0), "tab:blue", 7),
-        ("B: drop floater (v0=19)", _release(19.0, z0=2.8, vz=-0.5), "tab:orange", 3),
-        ("C: below sweet spot (v0=13)", _release(13.0), "tab:green", 12),
-    ]
+_SCENARIOS = [
+    (
+        f"{preset.label} (v0={preset.speed:g} m/s)",
+        preset.slug,
+        preset.release_state(),
+        color,
+        preset.seed,
+    )
+    for preset, color in zip(
+        CANONICAL_FLOAT_SERVES,
+        ("tab:blue", "tab:orange", "tab:green"),
+    )
+]
 
+
+def plot_canonical() -> plt.Figure:
     fig = plt.figure(figsize=(14, 5))
     ax_top = fig.add_subplot(1, 3, 1)
     ax_side = fig.add_subplot(1, 3, 2)
     ax_re = fig.add_subplot(1, 3, 3)
 
-    for label, rs, color, seed in scenarios:
+    for label, _slug, rs, color, seed in _SCENARIOS:
         rng = np.random.default_rng(seed)
         traj = simulate_stochastic(rs, rng=rng, t_max=1.5, dt=0.005)
         pos = traj.position
@@ -93,6 +107,34 @@ def plot_canonical() -> plt.Figure:
     fig.suptitle("Three canonical float-serve trajectories", fontsize=12)
     fig.tight_layout()
     return fig
+
+
+def write_animations(out_dir: str) -> list[str]:
+    """Write one interactive 3D animation for each canonical serve."""
+    output_paths = []
+    for label, slug, release, _color, seed in _SCENARIOS:
+        traj = simulate_stochastic(
+            release,
+            rng=np.random.default_rng(seed),
+            t_max=2.0,
+            dt=0.005,
+        )
+        reference_traj = simulate_stochastic(
+            release,
+            rng=None,
+            t_max=2.0,
+            dt=0.005,
+        )
+        fig = plot_trajectory_animation(
+            traj,
+            reference_trajectory=reference_traj,
+            title=f"Float serve: {label}",
+            config=AnimationConfig(frame_count=100, frame_duration_ms=30),
+        )
+        path = os.path.join(out_dir, f"animated_float_{slug}.html")
+        fig.write_html(path, include_plotlyjs="cdn")
+        output_paths.append(path)
+    return output_paths
 
 
 def plot_montecarlo(n_trials: int = 50, v0_mag: float = 16.0) -> tuple[plt.Figure, dict[str, float]]:
@@ -161,6 +203,10 @@ def main() -> None:
     print("Landing-point scatter at v=16 m/s, omega=0:")
     for k, v in stats.items():
         print(f"  {k} = {v:.1f}")
+
+    print("Generating interactive float-serve animations ...")
+    for path in write_animations(out_dir):
+        print(f"  -> {path}")
 
     print("\n--- Sanity checks (matching values quoted in research doc) ---")
     print(f"Cd at Re=84k:  {cd_full_regime(84_000):.3f}  (expect 0.45)")

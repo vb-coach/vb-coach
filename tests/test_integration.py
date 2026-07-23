@@ -3,8 +3,9 @@
 import numpy as np
 
 from vb_coach.aerodynamics import reynolds
-from vb_coach.constants import BALL_DIAMETER, NU_AIR, RHO_AIR
-from vb_coach.trajectory import ReleaseState, simulate
+from vb_coach.constants import BALL_DIAMETER, NET_HEIGHT_MEN, NU_AIR, RHO_AIR
+from vb_coach.serving import CANONICAL_FLOAT_SERVES
+from vb_coach.trajectory import ReleaseState, simulate, simulate_stochastic
 
 
 def test_reynolds_for_typical_set_is_subcritical():
@@ -60,3 +61,19 @@ def test_top_spin_drops_ball_earlier_than_no_spin():
     # Top-spin should land sooner and shorter (smaller y at landing)
     assert traj_top.time[-1] < traj_base.time[-1]
     assert traj_top.position[-1, 1] < traj_base.position[-1, 1]
+
+
+def test_canonical_float_serves_clear_net_and_land_in_bounds():
+    for preset in CANONICAL_FLOAT_SERVES:
+        traj = simulate_stochastic(
+            preset.release_state(),
+            rng=np.random.default_rng(preset.seed),
+            t_max=2.0,
+            dt=0.005,
+        )
+        net_idx = int(np.argmin(np.abs(traj.position[:, 1])))
+        landing = traj.position[-1]
+        assert traj.position[net_idx, 2] > NET_HEIGHT_MEN
+        assert landing[2] <= 0.05
+        assert abs(landing[0]) <= 4.5
+        assert 0.0 <= landing[1] <= 9.0
