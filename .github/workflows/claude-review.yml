@@ -1,0 +1,36 @@
+name: Claude Review
+
+# Reviews once per PR. New pushes do not re-trigger it; add the `re-review` label to ask for another round.
+on:
+  pull_request:
+    types: [opened, ready_for_review, reopened, labeled]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "**/*.html"
+      - "uv.lock"
+
+jobs:
+  review:
+    # Fork PRs are skipped because GitHub withholds secrets from them.
+    if: >-
+      !github.event.pull_request.draft &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (github.event.action != 'labeled' || github.event.label.name == 're-review')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          plugin_marketplaces: "https://github.com/anthropics/claude-plugins-official.git"
+          plugins: "code-review@claude-plugins-official"
+          prompt: "/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+          claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment"'
