@@ -1,8 +1,16 @@
 import math
 
 import numpy as np
+import pytest
 
-from vb_coach.physics import gravity_force, drag_force, magnus_force, total_acceleration, knuckle_force
+from vb_coach.physics import (
+    _KNUCKLE_VERTICAL_FRACTION,
+    drag_force,
+    gravity_force,
+    knuckle_force,
+    magnus_force,
+    total_acceleration,
+)
 from vb_coach.constants import BALL_MASS, G, RHO_AIR, BALL_CROSS_SECTION
 from vb_coach.aerodynamics.knuckle import OUState
 
@@ -119,16 +127,18 @@ def test_total_acceleration_default_diameter_is_two_radii():
     )
 
 
-def test_knuckle_force_magnitude_does_not_depend_on_pitch():
-    # Steep flight: |v_xy| / |v| = 0.45. The lateral basis must stay unit length,
-    # so |F| = 0.5 * rho * A * Cl * |v|^2 for a unit OU channel.
+@pytest.mark.parametrize("velocity", [[0.0, 21.0, 0.5], [0.0, 10.0, 20.0], [6.0, 8.0, -18.0]])
+@pytest.mark.parametrize("chan_h, chan_v, weight", [(1.0, 0.0, 1.0), (0.0, 1.0, _KNUCKLE_VERTICAL_FRACTION)])
+def test_knuckle_force_magnitude_does_not_depend_on_pitch(velocity, chan_h, chan_v, weight):
+    # Both lateral basis vectors must stay unit length at any pitch, so for a
+    # unit OU channel |F| = weight * 0.5 * rho * A * Cl * |v|^2.
     from vb_coach.aerodynamics import reynolds
     from vb_coach.aerodynamics.knuckle import cl_lat_rms
     from vb_coach.constants import BALL_DIAMETER, NU_AIR
 
-    v = np.array([0.0, 10.0, 20.0])
+    v = np.array(velocity)
     speed = float(np.linalg.norm(v))
     re = reynolds(speed, BALL_DIAMETER, NU_AIR)
-    f = knuckle_force(v, OUState(chan_h=1.0, chan_v=0.0), rho=RHO_AIR, area=BALL_CROSS_SECTION, re=re)
-    expected = 0.5 * RHO_AIR * BALL_CROSS_SECTION * cl_lat_rms(re) * speed**2
+    f = knuckle_force(v, OUState(chan_h=chan_h, chan_v=chan_v), rho=RHO_AIR, area=BALL_CROSS_SECTION, re=re)
+    expected = weight * 0.5 * RHO_AIR * BALL_CROSS_SECTION * cl_lat_rms(re) * speed**2
     assert math.isclose(float(np.linalg.norm(f)), expected, rel_tol=1e-9)
