@@ -4,6 +4,7 @@
 
 - 用 `uv` 管理 Python 环境和依赖，所有命令通过 `uv run ...` 跑
 - 安装新依赖：`uv add <pkg>`（运行时）或 `uv add --dev <pkg>`（开发）
+- 仓库在 iCloud 里，`.venv` 内的文件会被打上 macOS hidden 标志（来源未确认），Python 3.11.15 会跳过这样的 `.pth`，表现为 `ModuleNotFoundError: No module named 'vb_coach'`。把 venv 放到 iCloud 外：`export UV_PROJECT_ENVIRONMENT=~/.cache/uv-venvs/vb-coach`
 
 ## 语言
 
