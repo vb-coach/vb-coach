@@ -105,3 +105,30 @@ def test_knuckle_force_zero_when_cl_lat_zero():
     ou = OUState(chan_h=1.0, chan_v=1.0)
     f = knuckle_force(v, ou, rho=1.2, area=0.0346, re=50_000)
     assert float(np.linalg.norm(f)) < 0.01
+
+
+def test_total_acceleration_default_diameter_is_two_radii():
+    # At 20 m/s Re sits in the drag crisis, so a wrong characteristic length
+    # changes Cd; at rest it would not.
+    from vb_coach.constants import BALL_DIAMETER, BALL_RADIUS
+
+    v = np.array([20.0, 0.0, 0.0])
+    args = (v, np.zeros(3), BALL_MASS, RHO_AIR, BALL_CROSS_SECTION, BALL_RADIUS)
+    np.testing.assert_allclose(
+        total_acceleration(*args), total_acceleration(*args, diameter=BALL_DIAMETER), rtol=1e-12
+    )
+
+
+def test_knuckle_force_magnitude_does_not_depend_on_pitch():
+    # Steep flight: |v_xy| / |v| = 0.45. The lateral basis must stay unit length,
+    # so |F| = 0.5 * rho * A * Cl * |v|^2 for a unit OU channel.
+    from vb_coach.aerodynamics import reynolds
+    from vb_coach.aerodynamics.knuckle import cl_lat_rms
+    from vb_coach.constants import BALL_DIAMETER, NU_AIR
+
+    v = np.array([0.0, 10.0, 20.0])
+    speed = float(np.linalg.norm(v))
+    re = reynolds(speed, BALL_DIAMETER, NU_AIR)
+    f = knuckle_force(v, OUState(chan_h=1.0, chan_v=0.0), rho=RHO_AIR, area=BALL_CROSS_SECTION, re=re)
+    expected = 0.5 * RHO_AIR * BALL_CROSS_SECTION * cl_lat_rms(re) * speed**2
+    assert math.isclose(float(np.linalg.norm(f)), expected, rel_tol=1e-9)

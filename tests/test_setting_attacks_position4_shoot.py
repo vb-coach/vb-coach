@@ -74,16 +74,16 @@ def test_score_shoot_returns_diagnostics():
 
 def test_score_shoot_includes_apex_index():
     # 平拉开 attacker hits AT apex (v_z ~ 0). The score filter should be
-    # >= apex_idx, not > apex_idx, so the apex point itself counts.
-    # Test by checking that a trajectory with apex inside the window scores nonzero.
+    # >= apex_idx, not > apex_idx, so the apex point itself counts and is the
+    # contact. The previous release (-7.5, -0.5, 3.5) peaked above the window,
+    # so the assertion never ran; this one is the good flat set above.
     rs = _set_release(
-        velocity=np.array([-7.5, -0.5, 3.5]),
+        velocity=np.array([-8.5, -0.6, 3.0]),
         position=np.array([-1.5, 0.5, 2.3]),
     )
     traj = simulate(rs, t_max=3.0)
     window = position4_hit_window(DEFAULT_AMATEUR_MALE)
+    apex_idx = traj.apex_index()
+    assert window.contains(traj.position[apex_idx])
     result = score_shoot_ball(traj, window)
-    if result.contact_index >= 0:
-        apex_idx = traj.apex_index()
-        # Contact index should be at or just past apex (within a few frames)
-        assert abs(result.contact_index - apex_idx) < 20
+    assert result.contact_index == apex_idx
