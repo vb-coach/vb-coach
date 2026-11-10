@@ -35,22 +35,26 @@ def test_score_shoot_good_flat_set_above_threshold():
 
 def test_score_shoot_high_ball_velocity_scores_low():
     # A textbook HIGH ball with v_z ~ -4 m/s at contact should score LOW against
-    # the shoot window because v_z is far from the ideal 0.
-    rs = _set_release(velocity=np.array([-4.8, -0.5, 5.5]))
+    # the shoot window because v_z is far from the ideal 0. This is the release
+    # the high-ball tests score > 0.5; (-4.8, -0.5, 5.5) never entered the window.
+    rs = _set_release(velocity=np.array([-5.0, -0.7, 5.5]))
     traj = simulate(rs, t_max=3.0)
     window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_shoot_ball(traj, window)
+    assert result.contact_index >= 0
+    assert result.velocity_score == 0.0
     assert result.score < 0.4
 
 
 def test_score_shoot_is_in_unit_interval():
     rs = _set_release(
-        velocity=np.array([-7.5, -0.5, 3.5]),
+        velocity=np.array([-8.5, -0.6, 3.0]),
         position=np.array([-1.5, 0.5, 2.3]),
     )
     traj = simulate(rs, t_max=3.0)
     window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_shoot_ball(traj, window)
+    assert result.contact_index >= 0
     assert 0.0 <= result.score <= 1.0
     assert 0.0 <= result.dwell_score <= 1.0
     assert 0.0 <= result.velocity_score <= 1.0
@@ -59,12 +63,13 @@ def test_score_shoot_is_in_unit_interval():
 
 def test_score_shoot_returns_diagnostics():
     rs = _set_release(
-        velocity=np.array([-7.5, -0.5, 3.5]),
+        velocity=np.array([-8.5, -0.6, 3.0]),
         position=np.array([-1.5, 0.5, 2.3]),
     )
     traj = simulate(rs, t_max=3.0)
     window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_shoot_ball(traj, window)
+    assert result.contact_index >= 0
     assert isinstance(result.score, float)
     assert isinstance(result.dwell_seconds, float)
     assert isinstance(result.velocity_at_contact_z, float)
@@ -74,16 +79,16 @@ def test_score_shoot_returns_diagnostics():
 
 def test_score_shoot_includes_apex_index():
     # 平拉开 attacker hits AT apex (v_z ~ 0). The score filter should be
-    # >= apex_idx, not > apex_idx, so the apex point itself counts.
-    # Test by checking that a trajectory with apex inside the window scores nonzero.
+    # >= apex_idx, not > apex_idx, so the apex point itself counts and is the
+    # contact. The previous release (-7.5, -0.5, 3.5) peaked above the window,
+    # so the assertion never ran; this one is the good flat set above.
     rs = _set_release(
-        velocity=np.array([-7.5, -0.5, 3.5]),
+        velocity=np.array([-8.5, -0.6, 3.0]),
         position=np.array([-1.5, 0.5, 2.3]),
     )
     traj = simulate(rs, t_max=3.0)
     window = position4_hit_window(DEFAULT_AMATEUR_MALE)
+    apex_idx = traj.apex_index()
+    assert window.contains(traj.position[apex_idx])
     result = score_shoot_ball(traj, window)
-    if result.contact_index >= 0:
-        apex_idx = traj.apex_index()
-        # Contact index should be at or just past apex (within a few frames)
-        assert abs(result.contact_index - apex_idx) < 20
+    assert result.contact_index == apex_idx

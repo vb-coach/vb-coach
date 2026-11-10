@@ -184,3 +184,35 @@ def test_simulate_stochastic_terminates_on_y_bound():
     # Ball should hit |y| = 1 well before falling to z=0
     assert abs(traj.position[-1, 1]) > 1.0
     assert traj.position[-1, 2] > 0.0
+
+
+@pytest.mark.parametrize(
+    "spin, max_landing_gap, max_time_gap",
+    [
+        # 21 m/s is inside the drag crisis, so Cd depends on the diameter passed to the RHS.
+        (np.zeros(3), 0.05, 0.01),
+        # Spin makes the Magnus term depend on the radius passed to the RHS.
+        (np.array([30.0, 0.0, 0.0]), 0.05, 0.01),
+    ],
+)
+def test_simulate_agrees_with_deterministic_stochastic(spin, max_landing_gap, max_time_gap):
+    # The two integrators share the force model, so with rng=None and a fine
+    # step they must land in the same place at the same time.
+    rs = ReleaseState(position=np.array([0.0, -9.0, 2.8]), velocity=np.array([0.0, 21.0, 2.0]), spin=spin)
+    rk = simulate(rs, t_max=3.0)
+    eu = simulate_stochastic(rs, rng=None, t_max=3.0, dt=0.001)
+    assert abs(rk.position[-1, 1] - eu.position[-1, 1]) < max_landing_gap
+    assert abs(rk.time[-1] - eu.time[-1]) < max_time_gap
+
+
+def test_simulate_stochastic_is_symplectic_euler_in_vacuum():
+    # Symplectic Euler under constant gravity: z_n = z0 + v0 t - g t^2 / 2 - g t dt / 2.
+    # Explicit Euler would give + g t dt / 2 instead.
+    from vb_coach.constants import G
+
+    dt = 0.005
+    rs = ReleaseState(position=np.array([0.0, 0.0, 2.0]), velocity=np.array([0.0, 3.0, 5.0]), spin=np.zeros(3))
+    traj = simulate_stochastic(rs, rng=None, t_max=0.8, dt=dt, rho=0.0)
+    t = traj.time
+    expected = 2.0 + 5.0 * t - 0.5 * G * t**2 - 0.5 * G * t * dt
+    np.testing.assert_allclose(traj.position[:, 2], expected, atol=1e-9)

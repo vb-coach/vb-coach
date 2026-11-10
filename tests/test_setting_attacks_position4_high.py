@@ -3,6 +3,7 @@ import numpy as np
 from vb_coach.constants import RHO_AIR
 from vb_coach.setting.attacker import DEFAULT_AMATEUR_MALE
 from vb_coach.setting.attacks_position4 import (
+    _DWELL_TARGET_SECONDS,
     HighBallScore,
     score_high_ball,
 )
@@ -52,22 +53,25 @@ def test_score_good_high_ball_above_threshold():
 
 
 def test_score_low_apex_set_scores_low():
-    # Low-apex set (lower z velocity → faster descent through the window).
-    # Tune to ensure the trajectory does enter the window during descent.
-    rs = _set_release(velocity=np.array([-4.5, -0.5, 4.0]))
+    # Low-apex set: apex ~3.3 m against ~3.6 m for the textbook high ball. It
+    # reaches the window with a shallower descent (v_z ~ -3.6 m/s) and spends
+    # less time inside, so it should score well below the textbook ball. The
+    # previous release (-4.5, -0.5, 4.0) never entered the window.
+    rs = _set_release(velocity=np.array([-5.5, -0.8, 4.8]))
     traj = simulate(rs, t_max=3.0)
     window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_high_ball(traj, window)
-    # The score should be substantially lower than a textbook high ball.
-    # If the ball misses the window entirely, score=0 (still low).
+    assert result.contact_index >= 0
+    assert result.dwell_seconds < _DWELL_TARGET_SECONDS
     assert result.score < 0.5
 
 
 def test_score_is_in_unit_interval():
-    rs = _set_release(velocity=np.array([-4.8, -0.5, 5.5]))
+    rs = _set_release(velocity=np.array([-5.0, -0.7, 5.5]))
     traj = simulate(rs, t_max=3.0)
     window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_high_ball(traj, window)
+    assert result.contact_index >= 0
     assert 0.0 <= result.score <= 1.0
     assert 0.0 <= result.dwell_score <= 1.0
     assert 0.0 <= result.velocity_score <= 1.0
@@ -75,10 +79,11 @@ def test_score_is_in_unit_interval():
 
 
 def test_score_returns_diagnostics():
-    rs = _set_release(velocity=np.array([-4.8, -0.5, 5.5]))
+    rs = _set_release(velocity=np.array([-5.0, -0.7, 5.5]))
     traj = simulate(rs, t_max=3.0)
     window = position4_hit_window(DEFAULT_AMATEUR_MALE)
     result = score_high_ball(traj, window)
+    assert result.contact_index >= 0
     # All diagnostic fields are present and have expected types
     assert isinstance(result.score, float)
     assert isinstance(result.dwell_seconds, float)

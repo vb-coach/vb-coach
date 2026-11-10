@@ -1,8 +1,16 @@
 import math
 
 import numpy as np
+import pytest
 
-from vb_coach.physics import gravity_force, drag_force, magnus_force, total_acceleration, knuckle_force
+from vb_coach.physics import (
+    _KNUCKLE_VERTICAL_FRACTION,
+    drag_force,
+    gravity_force,
+    knuckle_force,
+    magnus_force,
+    total_acceleration,
+)
 from vb_coach.constants import BALL_MASS, G, RHO_AIR, BALL_CROSS_SECTION
 from vb_coach.aerodynamics.knuckle import OUState
 
@@ -105,3 +113,32 @@ def test_knuckle_force_zero_when_cl_lat_zero():
     ou = OUState(chan_h=1.0, chan_v=1.0)
     f = knuckle_force(v, ou, rho=1.2, area=0.0346, re=50_000)
     assert float(np.linalg.norm(f)) < 0.01
+
+
+def test_total_acceleration_default_diameter_is_two_radii():
+    # At 20 m/s Re sits in the drag crisis, so a wrong characteristic length
+    # changes Cd; at rest it would not.
+    from vb_coach.constants import BALL_DIAMETER, BALL_RADIUS
+
+    v = np.array([20.0, 0.0, 0.0])
+    args = (v, np.zeros(3), BALL_MASS, RHO_AIR, BALL_CROSS_SECTION, BALL_RADIUS)
+    np.testing.assert_allclose(
+        total_acceleration(*args), total_acceleration(*args, diameter=BALL_DIAMETER), rtol=1e-12
+    )
+
+
+@pytest.mark.parametrize("velocity", [[0.0, 21.0, 0.5], [0.0, 10.0, 20.0], [6.0, 8.0, -18.0]])
+@pytest.mark.parametrize("chan_h, chan_v, weight", [(1.0, 0.0, 1.0), (0.0, 1.0, _KNUCKLE_VERTICAL_FRACTION)])
+def test_knuckle_force_magnitude_does_not_depend_on_pitch(velocity, chan_h, chan_v, weight):
+    # Both lateral basis vectors must stay unit length at any pitch, so for a
+    # unit OU channel |F| = weight * 0.5 * rho * A * Cl * |v|^2.
+    from vb_coach.aerodynamics import reynolds
+    from vb_coach.aerodynamics.knuckle import cl_lat_rms
+    from vb_coach.constants import BALL_DIAMETER, NU_AIR
+
+    v = np.array(velocity)
+    speed = float(np.linalg.norm(v))
+    re = reynolds(speed, BALL_DIAMETER, NU_AIR)
+    f = knuckle_force(v, OUState(chan_h=chan_h, chan_v=chan_v), rho=RHO_AIR, area=BALL_CROSS_SECTION, re=re)
+    expected = weight * 0.5 * RHO_AIR * BALL_CROSS_SECTION * cl_lat_rms(re) * speed**2
+    assert math.isclose(float(np.linalg.norm(f)), expected, rel_tol=1e-9)
