@@ -28,5 +28,9 @@ jobs:
       - name: Publish Wiki
         id: wiki
         uses: sysevol-ai/wiki-action@aa49bae94180be3e8bb7fbcac8c24b17bd80b74e # v1.0.4
+        env:
+          CODENIB_DEMO_MODEL_OPTIONS: '{"extra_body":{"thinking":{"type":"disabled"}}}'
         with:
-          wiki: index
+          wiki: story
+          model: deepseek/deepseek-flash
+          api-key: ${{ secrets.CODENIB_WIKI_API_KEY }}
