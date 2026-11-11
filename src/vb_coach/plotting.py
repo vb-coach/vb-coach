@@ -34,6 +34,7 @@ def plot_trajectory_3d(traj: Trajectory, net_height: float | None = None) -> plt
 
 
 def plot_trajectory_side(traj: Trajectory, net_height: float | None = None) -> plt.Figure:
+    """Plot height against across-court distance, in meters."""
     fig, ax = plt.subplots(figsize=(9, 5))
     ax.plot(traj.position[:, 1], traj.position[:, 2], lw=2)
     ax.scatter(traj.position[0, 1], traj.position[0, 2], color="green", s=40, label="release")
