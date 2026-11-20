@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>vb-coach</title>
+  <meta name="description" content="Physics models that turn volleyball coaching intuition into quantities you can compute, plot and test.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+
+<header>
+  <h1>vb-coach</h1>
+  <p class="lead">Physics models that turn what volleyball coaches say about a ball — a set that “stands up” (立得住), a ball with a “head” (球头), a serve that “floats” (飘) — into quantities you can compute, plot and test.</p>
+  <nav class="links">
+    <a href="wiki/">Wiki</a>
+    <a href="https://github.com/vb-coach/vb-coach">GitHub</a>
+    <a href="#quick-start">Quick start</a>
+  </nav>
+</header>
+
+<h2>Questions</h2>
+<ol class="questions">
+  <li>How do a setter's release position, speed, height and spin decide how well the attacker can hit?</li>
+  <li>Attackers differ in height, reach and contact point. Which set suits each of them?</li>
+  <li>How much does a float serve actually move, can it be predicted, and when does it move most?</li>
+  <li>For the same release, which of three attacks — high ball, half-high, or shoot — fits this attacker best?</li>
+</ol>
+
+<h2>What is built</h2>
+<div class="item">
+  <div class="name">Trajectory engine</div>
+  <div class="desc">Gravity, drag and Magnus force integrated with RK45. Drag covers both the subcritical regime and the drag crisis; a stochastic model adds the lateral forces behind float serves.</div>
+</div>
+<div class="item">
+  <div class="name">Attack scoring</div>
+  <div class="desc">Attackers modeled from height, standing and jump reach, and level, with seven presets from amateur to elite. Each set gets a score in [0, 1] for high, half-high and shoot attacks from positions 4 and 2, with dwell time, vertical speed at contact and lateral drift as diagnostics.</div>
+</div>
+<div class="item">
+  <div class="name">Visualization</div>
+  <div class="desc">Side views and 3D plots, Plotly animations with adjustable playback, a metric Three.js court seen from a player's eye height, and a Streamlit app for attacks and float serves.</div>
+</div>
+<div class="item">
+  <div class="name">Float-serve study</div>
+  <div class="desc">Float serves sit between 13 and 20 m/s, move most near a critical Reynolds number of about 1.5–2.5 × 10<sup>5</sup>, and land with about 30 cm of sideline scatter.</div>
+</div>
+
+<figure>
+  <img src="figures/float_trajectories.png" width="1667" height="596" alt="Three canonical float-serve trajectories in top-down view, side view and Reynolds number over time.">
+  <figcaption>Three typical float serves: top-down drift, side view, and Reynolds number through flight.</figcaption>
+</figure>
+<figure>
+  <img src="figures/float_montecarlo.png" width="1426" height="588" alt="Landing points of 50 simulated float serves at 16 m/s without spin.">
+  <figcaption>Landing points of 50 simulated float serves at 16 m/s without spin, and how far downcourt they land.</figcaption>
+</figure>
+
+<h2 id="quick-start">Quick start</h2>
+<pre><code>uv sync
+uv run streamlit run app.py
+# then open http://localhost:8501</code></pre>
+<p class="note">The app has an attack scene and a float-serve scene. Scripts under <code>examples/</code> produce the static figures and animated HTML views.</p>
+
+<h2>Limits</h2>
+<ul class="plain">
+  <li>Scores are priors from coaching intuition and physics, not calibrated against match data. A 200-rally video annotation study is planned to fill that gap.</li>
+  <li>Defaults describe an amateur male attacker (178 cm tall, 295 cm jump reach, 280 cm contact point).</li>
+</ul>
+
+<h2>Next</h2>
+<ul class="plain">
+  <li>Quick attacks from position 3, and back-row attacks</li>
+  <li>Recommending the best attack from an attacker's measurements</li>
+  <li>Realistic court and ball materials</li>
+</ul>
+
+<footer>
+  <span>vb-coach</span>
+  <a href="wiki/">Wiki, built with CodeNib</a>
+  <a href="https://github.com/vb-coach/vb-coach">GitHub</a>
+</footer>
+
+</main>
+</body>
+</html>

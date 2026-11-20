@@ -1,0 +1,72 @@
+name: Site and CodeNib Wiki
+
+# Publishes the project homepage from site/ at the Pages root and the
+# CodeNib Wiki below it at /wiki/.
+on:
+  push:
+    branches: [main, site/homepage]
+  workflow_dispatch:
+    inputs:
+      full-rebuild:
+        description: Rewrite every Wiki page instead of keeping unchanged ones.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: codenib-wiki
+  cancel-in-progress: false
+
+jobs:
+  site:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Configure GitHub Pages
+        id: pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+
+      # Same CodeNib commit that sysevol-ai/wiki-action v1.0.4 pins, called
+      # directly so the Wiki can be mounted below the homepage.
+      - name: Build the Wiki
+        uses: sysevol-ai/CodeNib/.github/actions/publish@af212173dd4044f4eaaca13dc8f85f0b1f0be197
+        env:
+          CODENIB_WIKI_KEY: ${{ secrets.CODENIB_WIKI_API_KEY }}
+          CODENIB_DEMO_MODEL_OPTIONS: '{"extra_body":{"thinking":{"type":"disabled"}}}'
+        with:
+          base-path: ${{ steps.pages.outputs.base_path }}/wiki
+          site-url: ${{ steps.pages.outputs.base_url }}/wiki
+          site-output: ${{ runner.temp }}/site/wiki
+          wiki: story
+          wiki-model: deepseek/deepseek-flash
+          wiki-api-key-env: CODENIB_WIKI_KEY
+          wiki-full-rebuild: ${{ inputs.full-rebuild || 'false' }}
+          upload-context: "false"
+
+      - name: Add the homepage
+        env:
+          SITE: ${{ runner.temp }}/site
+        run: |
+          cp -R site/. "$SITE/"
+          mkdir -p "$SITE/figures"
+          cp docs/research/figures/float_trajectories.png docs/research/figures/float_montecarlo.png "$SITE/figures/"
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: ${{ runner.temp }}/site
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
