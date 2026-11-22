@@ -1,88 +1,380 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>vb-coach</title>
-  <meta name="description" content="Physics models that turn volleyball coaching intuition into quantities you can compute, plot and test.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vb-coach · 用物理，看懂排球</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Noto+Sans+SC:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #fffdf5; --ink: #111111; --yellow: #ffd400; --blue: #0047bb; --red: #e4002b; --muted: #555048;
+  --display: "Anton", "Noto Sans SC", sans-serif; --sans: "Noto Sans SC", -apple-system, "PingFang SC", sans-serif;
+  --viz-floor: #e9d8b4; --viz-court: #ff8a3d; --viz-free: #0047bb; --viz-line: #ffffff;
+  --viz-net: #111111; --viz-tape: #ffffff; --viz-antenna-1: #e4002b; --viz-antenna-2: #ffffff;
+  --viz-ball-1: #ffd400; --viz-ball-2: #0047bb; --viz-ball-edge: #111111;
+  --viz-path: #e4002b; --viz-alt: rgba(17, 17, 17, .3); --viz-ref: rgba(17, 17, 17, .7);
+  --viz-zone: rgba(0, 71, 187, .16); --viz-zone-hit: rgba(255, 212, 0, .95); --viz-zone-edge: #0047bb;
+  --viz-text: #111111; --viz-muted: #555048; --viz-out: #e4002b; --viz-dot: #0047bb;
+  --viz-font: 900 13px "Noto Sans SC", sans-serif; --viz-font-small: 700 12px "Noto Sans SC", sans-serif;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 17px; line-height: 1.7; overflow-x: hidden; }
+a { color: inherit; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; position: relative; }
+
+.nav { position: absolute; top: 0; left: 0; right: 0; z-index: 3; }
+.nav .wrap { display: flex; align-items: center; height: 64px; gap: 18px; }
+.nav .logo { font: 400 26px var(--display); letter-spacing: .02em; text-decoration: none; }
+.nav nav { margin-left: auto; display: flex; gap: 8px; font-weight: 900; font-size: 15px; }
+.nav nav a { text-decoration: none; padding: 6px 12px; border: 2px solid var(--ink); background: var(--paper); box-shadow: 3px 3px 0 var(--ink); }
+.nav nav a:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+
+/* hero poster */
+.hero { position: relative; min-height: 640px; overflow: hidden; background: var(--yellow); border-bottom: 4px solid var(--ink); }
+.hero::before { content: ""; position: absolute; inset: 0; background: radial-gradient(rgba(17,17,17,.16) 1.4px, transparent 1.6px) 0 0 / 14px 14px; mask-image: linear-gradient(110deg, transparent 40%, #000 75%); }
+.hero .slab { position: absolute; right: -10%; top: -20%; width: 62%; height: 150%; background: var(--blue); transform: rotate(14deg); }
+.hero .slab.red { width: 14%; right: 46%; background: var(--red); }
+.hero .wrap { padding-top: 120px; padding-bottom: 64px; z-index: 1; }
+.hero h1 { margin: 0; font: 900 clamp(52px, 10vw, 128px)/1 var(--sans); letter-spacing: -.03em; }
+.hero h1 span { display: block; animation: slam .7s cubic-bezier(.2,1.4,.4,1) both; }
+.hero h1 span:nth-child(2) { color: var(--paper); -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; animation-delay: .15s; }
+.hero .latin { font: 400 clamp(22px, 3vw, 34px) var(--display); letter-spacing: .06em; margin-top: 14px; }
+.hero .lead { max-width: 30em; margin: 22px 0 0; font-weight: 700; background: var(--paper); border: 3px solid var(--ink); padding: 14px 18px; box-shadow: 6px 6px 0 var(--ink); }
+.hero .bigball { position: absolute; right: 8%; top: 120px; width: min(34vw, 360px); aspect-ratio: 1; animation: bob 2.4s ease-in-out infinite; z-index: 1; }
+.hero .bigball canvas { display: block; width: 100%; height: 100%; border-radius: 50%; box-shadow: 10px 12px 0 rgba(17,17,17,.9); }
+@keyframes slam { from { transform: translateX(-60px) skewX(-12deg); opacity: 0; } }
+@keyframes bob { 50% { transform: translateY(-26px); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+
+section { position: relative; padding: 80px 0 72px; border-bottom: 4px solid var(--ink); }
+section.blue { background: var(--blue); color: var(--paper); }
+section.yellow { background: var(--yellow); }
+.huge { font: 400 clamp(88px, 16vw, 200px)/.8 var(--display); position: absolute; right: 16px; top: 18px; opacity: .14; pointer-events: none; }
+h2 { font: 900 clamp(32px, 5.4vw, 60px)/1.28 var(--sans); margin: 0 0 14px; letter-spacing: -.02em; }
+h2 .mark { background: var(--yellow); color: var(--ink); padding: .02em .15em 0; line-height: 1.15; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+section.yellow h2 .mark { background: var(--paper); }
+.intro { max-width: 40em; font-weight: 500; margin: 0 0 24px; }
+
+.card { background: var(--paper); color: var(--ink); border: 4px solid var(--ink); box-shadow: 10px 10px 0 var(--ink); padding: 10px; }
+.card canvas { display: block; width: 100%; }
+.cap { font-size: 13px; font-weight: 700; margin: 8px 2px 0; color: var(--muted); }
+
+.ctrl { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-bottom: 18px; }
+.ctrl [data-group] { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+.ctrl button { font: 900 16px var(--sans); background: var(--paper); color: var(--ink); border: 3px solid var(--ink); padding: 6px 14px; cursor: pointer; box-shadow: 3px 3px 0 var(--ink); transition: transform .1s, box-shadow .1s; }
+.ctrl button:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+.ctrl button[aria-pressed="true"] { background: var(--red); color: var(--paper); }
+.ctrl button.small { font: 400 15px var(--display); letter-spacing: .04em; padding: 5px 10px; }
+
+.score-row { display: grid; grid-template-columns: repeat(4, 1fr) 1.3fr; gap: 14px; margin-top: 26px; }
+.big { background: var(--paper); color: var(--ink); border: 3px solid var(--ink); padding: 8px 14px; }
+.big .k { font-size: 13px; font-weight: 700; color: var(--muted); }
+.big .v { font: 400 44px/1.05 var(--display); font-variant-numeric: tabular-nums; }
+.big .v small { font: 700 15px var(--sans); margin-left: 4px; color: var(--muted); }
+.big.hot { background: var(--red); color: var(--paper); transform: rotate(-2deg); box-shadow: 6px 6px 0 var(--ink); }
+.big.hot .k, .big.hot .v small { color: rgba(255,255,255,.85); }
+[data-host].is-hit .big.live { background: var(--yellow); }
+
+.matrix { width: 100%; border-collapse: collapse; margin-top: 30px; background: var(--paper); border: 3px solid var(--ink); }
+.matrix th, .matrix td { padding: 10px 12px; border: 2px solid var(--ink); text-align: center; }
+.matrix th { font-weight: 900; font-size: 14px; background: var(--ink); color: var(--paper); }
+.matrix td { font: 400 28px var(--display); }
+.matrix td:first-child { font: 900 16px var(--sans); text-align: left; }
+.matrix td span { display: inline-block; min-width: 3em; background: rgba(255, 212, 0, var(--score, 0)); padding: 0 6px; }
+.matrix td.is-zero { color: #9a948a; }
+.matrix tr.is-current td:first-child { background: var(--red); color: var(--paper); }
+
+.split { display: grid; grid-template-columns: 1fr; gap: 22px; }
+.note { margin-top: 26px; font-weight: 700; font-size: 19px; border-left: 8px solid var(--yellow); padding: 4px 0 4px 16px; }
+.cols { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 34px; align-items: start; }
+.cols .score-row { grid-template-columns: 1fr 1fr; }
+
+.try { background: var(--red); color: var(--paper); }
+.try .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 26px; }
+.try .tile { background: var(--paper); color: var(--ink); border: 3px solid var(--ink); padding: 16px; box-shadow: 6px 6px 0 var(--ink); }
+.try h3 { margin: 0 0 6px; font-size: 19px; font-weight: 900; }
+.try p { margin: 0; font-size: 15px; }
+pre { background: var(--ink); color: var(--yellow); border: 3px solid var(--ink); padding: 16px 18px; font: 500 15px/1.6 ui-monospace, Menlo, monospace; overflow-x: auto; margin: 0; }
+.limits { font-size: 15px; padding-left: 1.2em; }
+
+footer { background: var(--ink); color: var(--paper); padding: 22px 0; font-weight: 700; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+footer a { text-decoration: none; color: var(--yellow); }
+
+
+/* 3D court */
+section.court3d { background: var(--ink); color: var(--paper); }
+section.court3d h2 .mark { background: var(--yellow); color: var(--ink); }
+.view3d { position: relative; border: 4px solid var(--paper); box-shadow: 10px 10px 0 var(--red); background: #141a2b; }
+.view3d [data-3d-canvas] { height: min(68vh, 620px); min-height: 360px; }
+.view3d canvas { display: block; width: 100%; height: 100%; touch-action: pan-y; }
+.view3d .hud { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px; pointer-events: none; }
+.view3d .hud div { background: rgba(17,17,17,.78); border: 2px solid var(--paper); padding: 4px 10px; font-weight: 700; font-size: 13px; }
+.view3d .hud b { font: 400 24px var(--display); color: var(--yellow); margin: 0 3px 0 6px; font-variant-numeric: tabular-nums; }
+.view3d .rate3d { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; }
+.view3d .rate3d button { font: 400 14px var(--display); letter-spacing: .04em; padding: 4px 9px; border: 2px solid var(--paper); background: rgba(17,17,17,.7); color: var(--paper); cursor: pointer; }
+.view3d .rate3d button[aria-pressed="true"] { background: var(--yellow); color: var(--ink); border-color: var(--ink); }
+.view3d .tip { position: absolute; top: 10px; left: 12px; font-size: 13px; font-weight: 700; background: var(--yellow); color: var(--ink); padding: 2px 8px; }
+.court3d .ctrl { margin-bottom: 12px; }
+.court3d .ctrl .label { font-weight: 900; font-size: 14px; color: var(--yellow); margin-right: 2px; }
+.court3d .ctrl button[aria-pressed="true"] { background: var(--yellow); color: var(--ink); }
+
+.why { margin-top: 56px; }
+.why h3 { font: 900 clamp(24px, 3.4vw, 36px)/1.2 var(--sans); margin: 0 0 14px; color: var(--yellow); }
+.why-stage { border: 4px solid var(--paper); background: #1b2236; box-shadow: 10px 10px 0 var(--blue); }
+.why-stage canvas { display: block; width: 100%; }
+.why-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 28px; margin-top: 22px; align-items: start; }
+.why-steps { margin: 0; padding-left: 1.3em; font-weight: 500; }
+.why-steps li { margin-bottom: 10px; }
+.why-steps li::marker { font: 400 20px var(--display); color: var(--yellow); }
+.why-curve { border: 2px solid rgba(255,253,245,.35); padding: 10px 12px; }
+.why-curve canvas { display: block; width: 100%; }
+.why-curve .k { font-size: 13px; font-weight: 700; color: #bdb6aa; }
+.why-curve b { font: 400 22px var(--display); color: var(--yellow); }
+@media (max-width: 760px) { .why-grid { grid-template-columns: 1fr; } }
+.reveal { opacity: 0; transform: translateY(40px); transition: opacity .6s ease, transform .6s cubic-bezier(.2,.9,.3,1); }
+.reveal.in { opacity: 1; transform: none; }
+
+@media (max-width: 760px) {
+  .hero .bigball { width: 46vw; top: auto; bottom: 20px; right: -6%; }
+  .score-row, .cols { grid-template-columns: 1fr 1fr; }
+  .score-row .hot { grid-column: span 2; }
+  .cols { grid-template-columns: 1fr; }
+  .try .grid { grid-template-columns: 1fr; }
+  .nav nav a:not(.keep) { display: none; }
+  .huge { display: none; }
+  .view3d .hud { gap: 4px; left: 6px; right: 6px; bottom: 6px; }
+  .view3d .hud div { font-size: 11px; padding: 2px 6px; }
+  .view3d .hud b { font-size: 18px; }
+  .matrix th, .matrix td { padding: 6px 4px; }
+  .matrix th { font-size: 12px; }
+  .matrix td { font-size: 20px; }
+  .matrix td:first-child { font-size: 13px; }
+  .matrix td span { min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero h1 span, .hero .bigball { animation: none; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+}
+</style>
 </head>
 <body>
-<main>
 
-<header>
-  <h1>vb-coach</h1>
-  <p class="lead">Physics models that turn what volleyball coaches say about a ball — a set that “stands up” (立得住), a ball with a “head” (球头), a serve that “floats” (飘) — into quantities you can compute, plot and test.</p>
-  <nav class="links">
-    <a href="wiki/">Wiki</a>
-    <a href="https://github.com/vb-coach/vb-coach">GitHub</a>
-    <a href="#quick-start">Quick start</a>
-  </nav>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <clipPath id="vball-clip"><circle cx="20" cy="20" r="18.5"/></clipPath>
+    <symbol id="vball" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="18.5" fill="#ffd400" stroke="#111" stroke-width="1.6"/>
+      <g clip-path="url(#vball-clip)"><path d="M20 1.5 C 12 10, 12 30, 20 38.5" fill="none" stroke="#0047bb" stroke-width="4.5"/>
+      <path d="M2.5 13 C 13 15, 28 10, 37 5.5" fill="none" stroke="#0047bb" stroke-width="4.5"/>
+      <path d="M3 28 C 14 24, 28 28, 37 34.5" fill="none" stroke="#0047bb" stroke-width="4.5"/></g>
+      <circle cx="20" cy="20" r="18.5" fill="none" stroke="#111" stroke-width="1.6"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="nav"><div class="wrap">
+  <a class="logo" href="#">VB-COACH</a>
+  <nav><a href="#court">3D</a><a href="#set">二传</a><a href="#float">飘球</a><a href="https://github.com/vb-coach/vb-coach">GitHub</a><a class="keep" href="https://vb-coach.github.io/vb-coach/wiki/" style="background:var(--red);color:var(--paper)">Wiki</a></nav>
+</div></div>
+
+<header class="hero">
+  <div class="slab"></div><div class="slab red"></div>
+  <div class="bigball" aria-hidden="true"><canvas data-volleyball="stripes" data-rx="0.55" data-ry="0.65"></canvas></div>
+  <div class="wrap">
+    <h1><span>用物理，</span><span>看懂排球。</span></h1>
+    <p class="lead">“这球立得住”“有球头”“发得飘”——vb-coach 用重力、空气阻力和旋转升力，把教练的这些说法算成真实轨迹。下面的动画全部来自它的物理引擎，不是手画的。</p>
+  </div>
 </header>
 
-<h2>Questions</h2>
-<ol class="questions">
-  <li>How do a setter's release position, speed, height and spin decide how well the attacker can hit?</li>
-  <li>Attackers differ in height, reach and contact point. Which set suits each of them?</li>
-  <li>How much does a float serve actually move, can it be predicted, and when does it move most?</li>
-  <li>For the same release, which of three attacks — high ball, half-high, or shoot — fits this attacker best?</li>
-</ol>
 
-<h2>What is built</h2>
-<div class="item">
-  <div class="name">Trajectory engine</div>
-  <div class="desc">Gravity, drag and Magnus force integrated with RK45. Drag covers both the subcritical regime and the drag crisis; a stochastic model adds the lateral forces behind float serves.</div>
-</div>
-<div class="item">
-  <div class="name">Attack scoring</div>
-  <div class="desc">Attackers modeled from height, standing and jump reach, and level, with seven presets from amateur to elite. Each set gets a score in [0, 1] for high, half-high and shoot attacks from positions 4 and 2, with dwell time, vertical speed at contact and lateral drift as diagnostics.</div>
-</div>
-<div class="item">
-  <div class="name">Visualization</div>
-  <div class="desc">Side views and 3D plots, Plotly animations with adjustable playback, a metric Three.js court seen from a player's eye height, and a Streamlit app for attacks and float serves.</div>
-</div>
-<div class="item">
-  <div class="name">Float-serve study</div>
-  <div class="desc">Float serves sit between 13 and 20 m/s, move most near a critical Reynolds number of about 1.5–2.5 × 10<sup>5</sup>, and land with about 30 cm of sideline scatter.</div>
-</div>
 
-<figure>
-  <img src="figures/float_trajectories.png" width="1667" height="596" alt="Three canonical float-serve trajectories in top-down view, side view and Reynolds number over time.">
-  <figcaption>Three typical float serves: top-down drift, side view, and Reynolds number through flight.</figcaption>
-</figure>
-<figure>
-  <img src="figures/float_montecarlo.png" width="1426" height="588" alt="Landing points of 50 simulated float serves at 16 m/s without spin.">
-  <figcaption>Landing points of 50 simulated float serves at 16 m/s without spin, and how far downcourt they land.</figcaption>
-</figure>
+<section id="court" class="court3d">
+  <div class="huge" style="opacity:.1">3D</div>
+  <div class="wrap">
+    <h2 class="reveal">从场上看，<br><span class="mark">一个飘球怎么飘</span></h2>
+    <div class="ctrl reveal">
+      <span class="label">发球</span>
+      <div data-group="scene3d">
+        <button data-scene3d="serve-max22" aria-pressed="true">飘球 22 m/s</button>
+        <button data-scene3d="serve-drop" aria-pressed="false">下沉飘球 19 m/s</button>
+      </div>
+    </div>
+    <div class="ctrl reveal">
+      <span class="label">视角</span>
+      <div data-group="cam">
+        <button data-cam="receiver" aria-pressed="true">接发球员</button>
+        <button data-cam="server" aria-pressed="false">发球员</button>
+        <button data-cam="chase" aria-pressed="false">跟着球飞</button>
+        <button data-cam="aerial" aria-pressed="false">斜上方</button>
+        <button data-cam="side" aria-pressed="false" hidden>侧面</button>
+        <button data-cam="top" aria-pressed="false">正上方</button>
+      </div>
+    </div>
+    <div class="view3d reveal">
+      <div data-3d-canvas></div>
+      <div class="rate3d"><button class="small" data-rate3d="0.25" aria-pressed="false">0.25×</button><button class="small" data-rate3d="0.5" aria-pressed="true">0.5×</button><button class="small" data-rate3d="1" aria-pressed="false">1×</button></div>
+      <div class="hud">
+        <div>球速<b data-out3d="speed">0</b>m/s</div>
+        <div>高度<b data-out3d="height">0</b>m</div>
+        <div>这一球飘了<b data-out3d="drift">?</b>cm</div>
+      </div>
+    </div>
+    <p class="cap" style="color:#bdb6aa">按日常尺寸建模（球场 18 × 9 m，网高 2.35 m，球直径 21 cm）</p>
 
-<h2 id="quick-start">Quick start</h2>
-<pre><code>uv sync
+    <div class="why reveal" data-float-explainer>
+      <h3>为什么会飘</h3>
+      <div class="ctrl">
+        <span class="label">球速</span>
+        <div data-group="ex-speed">
+          <button class="small" data-ex-speed="13" aria-pressed="false">13 M/S</button>
+          <button class="small" data-ex-speed="19" aria-pressed="false">19 M/S</button>
+          <button class="small" data-ex-speed="22" aria-pressed="true">22 M/S</button>
+          <button class="small" data-ex-speed="26" aria-pressed="false">26 M/S</button>
+        </div>
+        <button class="small" data-ex-spin aria-pressed="false">让球转起来</button>
+      </div>
+      <div class="why-stage"><canvas data-explainer aria-label="飘球原理动画：不转的球两侧气流分离不对称，尾流偏向一边，球被推向另一边"></canvas></div>
+      <div class="why-grid">
+        <ol class="why-steps">
+          <li>球不转，球面接缝停在固定位置，两侧气流离开球面的位置（红点）不对称，尾流偏向一边，球就被推向另一边（红箭头）。</li>
+          <li>这种不对称会不定时翻转，大约每 0.35 秒换一次方向，球被推得左一下、右一下，接发的人事先猜不到。</li>
+          <li>只有速度合适才推得动：太慢或太快都很弱。球一旦转起来（每秒 3 圈以上），不对称被转平，就不飘了。</li>
+        </ol>
+        <div class="why-curve">
+          <div class="k">不同球速下的侧向推力（相对最大值）</div>
+          <canvas data-explainer-curve></canvas>
+          <div class="k">当前 <b data-out-ex="strength">—</b></div>
+        </div>
+      </div>
+      <p class="cap" style="color:#bdb6aa">气流线是示意；推力随速度的变化、方向变化的快慢来自 vb-coach 的飘球模型。</p>
+    </div>
+  </div>
+</section>
+
+<section id="set" class="yellow" data-host>
+  <div class="huge">SET</div>
+  <div class="wrap">
+    <h2 class="reveal">同一个二传手，<br><span class="mark">三种球</span></h2>
+    <p class="intro reveal">站在本方场地看向球网。二传在网前出手，把球传到左边的 4 号位。蓝色区域是一个业余男攻手（身高 1.78 m，助跑摸高 2.95 m）能舒服击球的范围；球在区里停得越久、下落速度越合适、横向漂得越少，评分越高。</p>
+    <div class="ctrl reveal">
+      <div data-group="set"><button data-set="high" aria-pressed="true">高球</button><button data-set="half" aria-pressed="false">半高球</button><button data-set="shoot" aria-pressed="false">平拉开</button></div>
+      <div data-group="rate"><button class="small" data-rate-set="0.25" aria-pressed="false">0.25×</button><button class="small" data-rate-set="0.5" aria-pressed="false">0.5×</button><button class="small" data-rate-set="1" aria-pressed="true">1×</button></div>
+      <button class="small" data-replay="set">↻ 再来</button>
+    </div>
+    <div class="card reveal"><canvas data-scene="set" aria-label="二传轨迹动画"></canvas></div>
+    <div class="score-row reveal">
+      <div class="big live"><div class="k">此刻高度</div><div class="v"><span data-out="set-height">0</span><small>m</small></div></div>
+      <div class="big live"><div class="k">此刻球速</div><div class="v"><span data-out="set-speed">0</span><small>m/s</small></div></div>
+      <div class="big"><div class="k">击球区停留</div><div class="v"><span data-out="set-dwell">0</span><small>s</small></div></div>
+      <div class="big"><div class="k">击球时下落速度</div><div class="v"><span data-out="set-vz">0</span><small>m/s</small></div></div>
+      <div class="big hot"><div class="k"><span data-out="set-name">高球</span>评分（满分 1）</div><div class="v"><span data-out="set-score">0</span></div></div>
+    </div>
+    <table class="matrix reveal">
+      <thead><tr><th>这一球</th><th>当高球打</th><th>当半高打</th><th>当平拉开打</th></tr></thead>
+      <tbody>
+        <tr data-row="high"><td>高球</td><td data-cell="high-high"></td><td data-cell="high-half"></td><td data-cell="high-shoot"></td></tr>
+        <tr data-row="half"><td>半高球</td><td data-cell="half-high"></td><td data-cell="half-half"></td><td data-cell="half-shoot"></td></tr>
+        <tr data-row="shoot"><td>平拉开</td><td data-cell="shoot-high"></td><td data-cell="shoot-half"></td><td data-cell="shoot-shoot"></td></tr>
+      </tbody>
+    </table>
+    <p class="cap">同一个球换个打法，分数可能直接变成 0：高球下落太快，攻手按平拉开的节奏挥臂就打不到。</p>
+  </div>
+</section>
+
+<section id="float" class="blue">
+  <div class="huge">FLOAT</div>
+  <div class="wrap">
+    <h2 class="reveal">三种速度，<br><span class="mark">三种飘法</span></h2>
+    <p class="intro reveal">不转的球速度合适时，球后方的气流会左右交替脱落，把球一会儿推向左、一会儿推向右，这就是“飘”。虚线是同样出手、但没有这股侧向力时的路线。</p>
+    <div class="ctrl reveal">
+      <div data-group="serve"><button data-serve="persistent" aria-pressed="true">临界区飘球</button><button data-serve="drop" aria-pressed="false">后程下沉</button><button data-serve="below_sweet_spot" aria-pressed="false">速度不够</button></div>
+      <div data-group="rate2"><button class="small" data-rate-serve="0.25" aria-pressed="false">0.25×</button><button class="small" data-rate-serve="0.5" aria-pressed="true">0.5×</button><button class="small" data-rate-serve="1" aria-pressed="false">1×</button></div>
+      <button class="small" data-replay="serve">↻ 再来</button>
+    </div>
+    <div class="split">
+      <div class="card reveal"><canvas data-scene="serve-side" data-height-scale="2" aria-label="飘球侧视动画"></canvas><p class="cap">侧面看：左边发球，右边是对方场地（高度方向放大 2 倍）</p></div>
+      <div class="card reveal"><canvas data-scene="serve-top" aria-label="飘球俯视动画"></canvas><p class="cap">从上往下看：实线偏离虚线多少，球就飘了多少</p></div>
+    </div>
+    <div class="score-row reveal">
+      <div class="big"><div class="k">出手速度</div><div class="v"><span data-out="serve-v0">0</span><small>m/s</small></div></div>
+      <div class="big live"><div class="k">此刻球速</div><div class="v"><span data-out="serve-speed">0</span><small>m/s</small></div></div>
+      <div class="big live"><div class="k">此刻横向偏离</div><div class="v"><span data-out="serve-drift">0</span><small>cm</small></div></div>
+      <div class="big"><div class="k">已飞行</div><div class="v"><span data-out="serve-time">0</span><small>s</small></div></div>
+      <div class="big hot"><div class="k">落地时横向偏离</div><div class="v"><span data-out="serve-final-drift">0</span><small>cm</small></div></div>
+    </div>
+    <p class="note reveal"><span data-out="serve-name">临界区飘球</span>：<span data-out="serve-note"></span></p>
+  </div>
+</section>
+
+<section id="scatter">
+  <div class="huge">×50</div>
+  <div class="wrap cols">
+    <div>
+      <h2 class="reveal">同样的发法，<br><span class="mark">发 50 次</span></h2>
+      <p class="intro reveal">每一次气流扰动都不一样，落点就会散开；散得越开，接发球的人越难提前站好位置。× 是不飘时的落点，红点是出界的球。</p>
+      <div class="ctrl reveal">
+        <div data-group="scatter"><button class="small" data-scatter="persistent" aria-pressed="true">21 M/S</button><button class="small" data-scatter="drop" aria-pressed="false">19 M/S</button><button class="small" data-scatter="below_sweet_spot" aria-pressed="false">13 M/S</button></div>
+        <button class="small" data-replay="scatter">↻ 再发 50 球</button>
+      </div>
+      <div class="score-row reveal">
+        <div class="big"><div class="k">已发球</div><div class="v"><span data-out="sc-n">0</span><small>/ 50</small></div></div>
+        <div class="big"><div class="k">出界</div><div class="v"><span data-out="sc-out">0</span><small>球</small></div></div>
+        <div class="big hot"><div class="k">落点左右散开（标准差）</div><div class="v"><span data-out="sc-sigma">0</span><small>cm</small></div></div>
+        <div class="big"><div class="k">最左到最右</div><div class="v"><span data-out="sc-spread">0</span><small>cm</small></div></div>
+      </div>
+    </div>
+    <div class="card reveal"><canvas data-scene="scatter" aria-label="50 次飘球落点动画"></canvas><p class="cap">对方半场俯视，球网在下方</p></div>
+  </div>
+</section>
+
+<section class="try">
+  <div class="huge">GO</div>
+  <div class="wrap">
+    <h2 class="reveal">自己<span class="mark">跑一遍</span></h2>
+    <div class="grid">
+      <div class="tile reveal"><h3>交互网页应用</h3><p>用 Streamlit 调攻手身高、二传出手、发球速度和旋转，实时看轨迹和评分。</p></div>
+      <div class="tile reveal"><h3>人眼视角</h3><p>按真实尺寸建模的球场，站在接发球员的位置、按自己的眼高看球飞过来。</p></div>
+      <div class="tile reveal"><h3>代码 Wiki</h3><p>每一页都标出对应的源码行。<a href="https://vb-coach.github.io/vb-coach/wiki/">去看 →</a></p></div>
+    </div>
+    <pre class="reveal"><code>uv sync
 uv run streamlit run app.py
-# then open http://localhost:8501</code></pre>
-<p class="note">The app has an attack scene and a float-serve scene. Scripts under <code>examples/</code> produce the static figures and animated HTML views.</p>
+# 浏览器打开 http://localhost:8501</code></pre>
+    <ul class="limits">
+      <li>评分是根据教练经验和物理推出来的先验值，还没有用比赛录像校准。</li>
+      <li>默认攻手是业余男攻手；女子和专业球员需要换参数。</li>
+    </ul>
+  </div>
+</section>
 
-<h2>Limits</h2>
-<ul class="plain">
-  <li>Scores are priors from coaching intuition and physics, not calibrated against match data. A 200-rally video annotation study is planned to fill that gap.</li>
-  <li>Defaults describe an amateur male attacker (178 cm tall, 295 cm jump reach, 280 cm contact point).</li>
-</ul>
+<footer><div class="wrap"><span>VB-COACH</span><a href="https://vb-coach.github.io/vb-coach/wiki/">Wiki（CodeNib 生成）</a><a href="https://github.com/vb-coach/vb-coach">GitHub</a></div></footer>
 
-<h2>Next</h2>
-<ul class="plain">
-  <li>Quick attacks from position 3, and back-row attacks</li>
-  <li>Recommending the best attack from an attacker's measurements</li>
-  <li>Realistic court and ball materials</li>
-</ul>
+<script src="shared/data.js?v=29"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+  import { mountCourt } from "./shared/court3d.js?v=30";
+  const host = document.getElementById("court");
+  try { window.VB3D = mountCourt(host); } catch (e) { host.querySelector("[data-3d-canvas]").textContent = "这个浏览器没法显示 3D 画面（需要 WebGL）。"; console.error(e); }
+</script>
 
-<footer>
-  <span>vb-coach</span>
-  <a href="wiki/">Wiki, built with CodeNib</a>
-  <a href="https://github.com/vb-coach/vb-coach">GitHub</a>
-</footer>
-
-</main>
+<script src="shared/viz.js?v=29"></script>
+<script src="shared/ball-render.js?v=7"></script>
+<script src="shared/float-explainer.js?v=9"></script>
+<script src="shared/app.js?v=29"></script>
+<script>
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { rootMargin: "0px 0px -8% 0px" });
+    document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+  } else document.querySelectorAll(".reveal").forEach((el) => el.classList.add("in"));
+</script>
 </body>
 </html>

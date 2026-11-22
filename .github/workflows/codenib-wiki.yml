@@ -59,8 +59,7 @@ jobs:
           SITE: ${{ runner.temp }}/site
         run: |
           cp -R site/. "$SITE/"
-          mkdir -p "$SITE/figures"
-          cp docs/research/figures/float_trajectories.png docs/research/figures/float_montecarlo.png "$SITE/figures/"
+          rm -rf "$SITE/scripts"            # data export scripts are not part of the site
 
       - name: Upload the site
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
